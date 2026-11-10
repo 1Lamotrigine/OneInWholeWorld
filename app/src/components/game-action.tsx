@@ -1,0 +1,32 @@
+'use client';
+
+import { Check, Compass, GitFork, Sparkles } from 'lucide-react';
+import { eventById } from '../game/engine/events';
+import { priorities, type Priority } from '../game/content/world';
+import { categories, type GameState } from '../game/types';
+import { useGame } from '../stores/game-store';
+
+export function GameAction({ state }: { state: GameState }) {
+  const { choose, setPriority, saving } = useGame();
+  const pending = state.pending;
+  const event = pending && eventById.get(pending.eventId);
+  if (state.ended) return null;
+  if (pending && event) return <section className="panel action-card decision" aria-labelledby="decision-heading" id="decision">
+    <p className="eyebrow"><GitFork size={16} /> Важное решение <span>{categories[event.category]}</span></p>
+    <h2 id="decision-heading">{event.title}</h2><p>{event.text}</p>
+    <div className="decision-options">{pending.optionIds.map(id => {
+      const option = event.choices?.find(choice => choice.id === id);
+      return option && <button key={id} className="choice-button" disabled={saving} onClick={() => choose(pending.token, id)}>
+        <span><strong>{option.label}</strong><small>{option.hint}</small></span><Compass size={18} />
+      </button>;
+    })}</div>
+  </section>;
+  return <section className="panel action-card year-focus" aria-labelledby="focus-heading">
+    <p className="eyebrow"><Sparkles size={16} /> Повседневная жизнь</p>
+    <h2 id="focus-heading">На что направить силы?</h2>
+    <p>{priorities[state.priority][1]} Приоритет влияет на ход лет и выбор в авторежиме.</p>
+    <div className="focus-options" role="group" aria-label="Приоритет жизни">{Object.entries(priorities).map(([id, [label]]) => <button className="button focus-chip" key={id} onClick={() => setPriority(id as Priority)} disabled={saving} aria-pressed={state.priority === id}>
+      {state.priority === id && <Check size={14} />}{label}
+    </button>)}</div>
+  </section>;
+}

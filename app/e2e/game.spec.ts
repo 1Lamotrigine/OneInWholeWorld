@@ -1,0 +1,233 @@
+import { expect, test, type Page } from '@playwright/test';
+import { createGame } from '../src/game/engine/create-game';
+import { takePath } from '../src/game/engine/influence';
+import { serializeSave } from '../src/db/save-format';
+import { races } from '../src/game/content/world';
+
+const settled = (page: Page) => expect(page.getByText('Сохранено на устройстве')).toBeVisible({ timeout: 15000 });
+const age = (page: Page) => page.getByTestId('age');
+
+async function pickPath(page: Page) {
+  await page.getByRole('button', { name: 'Воин', exact: true }).click();
+  await page.getByRole('button', { name: 'Подтвердить путь · Воин' }).click();
+}
+
+async function startLife(page: Page) {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  // Fix just the first seed for repeatable UI timing; IDs and commits still use the browser RNG.
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('elarion-e2e-seeded')) return;
+    const randomUUID = crypto.randomUUID.bind(crypto);
+    crypto.randomUUID = () => {
+      crypto.randomUUID = randomUUID;
+      sessionStorage.setItem('elarion-e2e-seeded', '1');
+      return '12345678-1234-4000-8000-123456789abc';
+    };
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Начать жизнь' }).click({ timeout: 20000 });
+  await expect(page.getByRole('heading', { name: 'Вероятности рождения' })).toBeVisible();
+  await pickPath(page);
+  await page.getByRole('button', { name: 'Прожить жизнь' }).click();
+  await settled(page);
+}
+
+test('рождение, реальное время, пауза, выбор, перезагрузка, смерть, PNG и архив JSON', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  await startLife(page);
+  await expect(age(page)).toHaveText('0 лет');
+  await page.getByRole('button', { name: '10×' }).click();
+  await expect(page.getByRole('button', { name: '10×' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(age(page)).toHaveText('1 год', { timeout: 8000 });
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Продолжить', exact: true })).toBeEnabled();
+  const pausedAge = await age(page).textContent();
+  await page.waitForTimeout(2700);
+  await expect(age(page)).toHaveText(pausedAge!);
+
+  await page.getByRole('button', { name: 'До решения' }).click();
+  const decision = page.locator('#decision');
+  await expect(decision).toBeVisible();
+  const title = await decision.getByRole('heading').innerText();
+  const atChoice = await age(page).textContent();
+  // Reload immediately after the time jump to exercise the write-ahead recovery.
+  await page.reload();
+  await settled(page);
+  await expect(decision.getByRole('heading')).toHaveText(title);
+  await expect(age(page)).toHaveText(atChoice!);
+  const choice = decision.getByRole('button').first();
+  const action = await choice.locator('strong').innerText();
+  await choice.click();
+  await settled(page);
+  await expect(page.locator('#chronicle')).toContainText(action);
+  await expect(page.getByRole('button', { name: 'Авторежим' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Авторежим' }).click();
+  await settled(page);
+  await page.reload();
+  await settled(page);
+  await expect(page.getByRole('button', { name: 'Авторежим' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'До решения' }).click();
+  await expect(decision).toBeVisible();
+  await settled(page);
+  const automaticTitle = await decision.getByRole('heading').innerText();
+  await page.getByRole('button', { name: 'Авторежим' }).click();
+  await settled(page);
+  await page.getByRole('button', { name: '5×' }).click();
+  await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
+  await expect(decision).toHaveCount(0, { timeout: 8000 });
+  await expect(page.locator('#chronicle')).toContainText(automaticTitle);
+
+  const summary = page.getByRole('heading', { name: 'Итог жизни' });
+  for (let i = 0; i < 160 && !await summary.isVisible(); i++) {
+    if (await decision.isVisible()) await decision.getByRole('button').first().click();
+    else await page.getByRole('button', { name: 'До решения' }).click();
+    await settled(page);
+  }
+  await expect(summary).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Продолжить', exact: true })).toBeDisabled();
+  const [card] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Карточка' }).click()]);
+  expect(card.suggestedFilename()).toMatch(/\.png$/);
+  await page.getByRole('link', { name: 'Сохранения' }).click();
+  await expect(page.getByRole('heading', { name: 'Архив жизней' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Открыть итог' })).toHaveCount(1);
+  const [save] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^Экспортировать / }).click()]);
+  const path = await save.path();
+  expect(path).not.toBeNull();
+  await page.locator('input[type=file]').setInputFiles({ name: 'broken.json', mimeType: 'application/json', buffer: Buffer.from('{') });
+  await expect(page.getByRole('alert').filter({ hasText: 'корректным JSON' })).toBeVisible();
+  await page.locator('input[type=file]').setInputFiles(path!);
+  await expect(page.getByRole('button', { name: 'Открыть итог' })).toHaveCount(2);
+  await page.getByRole('button', { name: /^Удалить / }).first().click();
+  await page.getByRole('button', { name: 'Удалить', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Открыть итог' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Открыть итог' }).click();
+  await expect(summary).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('сетку, управление и решение можно использовать от 320 до 1920 пикселей', async ({ page }) => {
+  await startLife(page);
+  await page.getByRole('button', { name: 'До решения' }).click();
+  await expect(page.locator('#decision')).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const width of [320, 375, 430, 768, 1024, 1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 850 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+    expect((await page.getByRole('button', { name: '5×' }).boundingBox())?.width).toBeGreaterThanOrEqual(44);
+    if (width < 768) {
+      const central = await page.locator('.central-column').boundingBox();
+      const profile = await page.locator('.character-column').boundingBox();
+      expect(central!.y).toBeLessThan(profile!.y);
+    }
+  }
+  await page.setViewportSize({ width: 640, height: 850 });
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(640);
+  const choice = page.locator('#decision button').first();
+  await expect(choice).toBeEnabled();
+  await choice.focus();
+  await expect(choice).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#decision')).toHaveCount(0);
+});
+
+test('две вкладки читают одну жизнь, устаревшая запись не перезаписывает прогресс', async ({ page, context }) => {
+  await startLife(page);
+  await page.getByRole('button', { name: 'Пауза', exact: true }).click();
+  const other = await context.newPage();
+  await other.goto('/game/');
+  await settled(other);
+  await expect(age(other)).toHaveText('0 лет');
+  await page.getByRole('button', { name: 'Знания', exact: true }).click();
+  await settled(page);
+  await other.getByRole('button', { name: 'Влияние', exact: true }).click();
+  await expect(other.getByText(/изменилась в другой вкладке/)).toBeVisible();
+  await expect(other.getByRole('button', { name: 'Экспортировать прогресс' })).toBeVisible();
+  const third = await context.newPage();
+  await third.goto('/game/');
+  await settled(third);
+  await expect(third.getByRole('button', { name: 'Знания', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('при отключённой IndexedDB можно прожить год и сохранить JSON вручную', async ({ page }) => {
+  await page.addInitScript(() => { Object.defineProperty(window, 'indexedDB', { value: undefined }); });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Начать жизнь' }).click();
+  await page.getByRole('button', { name: 'Играть с ручным экспортом' }).click();
+  await page.getByRole('button', { name: 'Пропустить прокрутку' }).click();
+  await pickPath(page);
+  await page.getByRole('button', { name: 'Прожить жизнь' }).click();
+  await page.getByRole('button', { name: '5×' }).click();
+  await expect(age(page)).not.toHaveText('0 лет', { timeout: 8000 });
+  const [save] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Экспортировать прогресс' }).click()]);
+  expect(save.suggestedFilename()).toMatch(/\.json$/);
+});
+
+test('раскрытие рождения можно пропустить, путь фиксируется после подтверждения', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Начать жизнь' }).click();
+  await expect(page.getByRole('heading', { name: 'Летопись открывается' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Прожить жизнь' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Пропустить прокрутку' }).click();
+  await expect(page.getByRole('button', { name: 'Прожить жизнь' })).toBeDisabled();
+  await pickPath(page);
+  await page.getByRole('button', { name: 'Прожить жизнь' }).click();
+  await settled(page);
+  await page.reload();
+  await settled(page);
+  await expect(page.locator('.character-column')).toContainText('Воин');
+  await expect(page.getByRole('heading', { name: 'Выберите жизненный путь' })).toHaveCount(0);
+});
+
+test('атлас показывает города, масштабируется, перемещается и позволяет сменить дом', async ({ page }) => {
+  const life = takePath(createGame('atlas-test', 'atlas-test'), 'politician');
+  const c = life.character;
+  c.age = races[c.race].stages[2];
+  c.region = 'valoria';
+  c.settlement = 'Ольховый Брод';
+  c.wealth = 95;
+  c.reputation = 55;
+  life.world.year += c.age;
+  life.revealed = true;
+  await page.goto('/archive/');
+  await expect(page.getByRole('button', { name: 'Импорт JSON' })).toBeEnabled({ timeout: 15000 });
+  await page.locator('input[type=file]').setInputFiles({ name: 'atlas.json', mimeType: 'application/json', buffer: Buffer.from(serializeSave(life)) });
+  await page.getByRole('button', { name: 'Продолжить' }).click();
+  await settled(page);
+  await page.getByRole('button', { name: 'Карта мира' }).click();
+  const modal = page.getByRole('dialog');
+  await expect(modal).toBeVisible();
+  expect((await modal.boundingBox())!.width).toBeCloseTo(1440 * .7, 0);
+  await expect(modal.locator('.country-shape')).toHaveCount(6);
+  await expect(modal.locator('.map-city')).toHaveCount(18);
+  await modal.getByRole('button', { name: 'Валор', exact: true }).hover();
+  await expect(modal.locator('.map-tooltip')).toContainText('Политик');
+  await modal.getByRole('button', { name: 'Увеличить карту' }).click();
+  const map = modal.locator('.world-map');
+  const before = await map.getAttribute('viewBox');
+  const box = (await map.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 46, box.y + box.height / 2 + 16, { steps: 6 });
+  await page.mouse.up();
+  await expect(map).not.toHaveAttribute('viewBox', before!);
+  await modal.getByLabel('Поселение').selectOption('frontier:1');
+  await modal.getByRole('button', { name: /Переехать · 8/ }).click();
+  await expect(modal.getByText('Новый дом — Три Башни.')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(modal).not.toBeVisible();
+  await settled(page);
+  await expect(page.locator('.scene-caption')).toContainText('Три Башни');
+  await page.locator('summary').filter({ hasText: 'Влияние на мир' }).click();
+  await page.getByRole('button', { name: 'Объявить войну · 20' }).click();
+  await settled(page);
+  await expect(page.locator('#chronicle')).toContainText('вступают в войну');
+  await page.getByRole('button', { name: 'Карта мира' }).click();
+  await expect(modal.locator('.country-shape[data-war="true"]')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await settled(page);
+  await expect(page.locator('.scene-caption')).toContainText('Три Башни');
+});
