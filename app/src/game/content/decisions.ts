@@ -2,7 +2,7 @@ import { addRelation, canWork, employ, hasRelation, regionState, relocate } from
 import { pick } from '../engine/random';
 import type { GameState } from '../types';
 import { professionIds, professions } from './professions';
-import { regionIds, regions } from './world';
+import { regionIds, regions, races } from './world';
 import { adult, child, decision as d, grown, independent, old, option as o, young } from './event-types';
 
 export const decisions = [
@@ -10,7 +10,7 @@ export const decisions = [
     o('enroll', 'Учиться у храмового писца', '−4 монеты · образование', 'В храме нашлось место за длинным столом. Первые буквы дались с трудом, но вскоре сложились в слова.', ['knowledge', 'influence'], { education: 7, stats: { intellect: 5 } }, { cost: 4 }),
     o('borrow', 'Попросить книгу домой', 'Немного знаний без платы', 'Писец одолжил книгу с полустёртыми буквами. Её удалось прочесть от корки до корки.', ['survival'], { education: 3 }),
     o('home', 'Остаться помогать дома', 'Связи с близкими и практические навыки', 'Зимние вечера прошли за домашней работой и разговорами с близкими.', ['wellbeing', 'wealth'], { bond: 4, stats: { strength: 3 } }),
-  ], { weight: 18 }),
+  ], { weight: 9, when: s => s.character.age >= Math.ceil(5 * Math.sqrt(races[s.character.race].lifespan[1] / 95)) }),
   d('foster', 'family', child, 'Место за общим столом', 'Семья мельников предлагает кров и место в доме. Взамен придётся помогать с хозяйством.', [
     o('accept', 'Переехать к мельникам', 'Опека и более устойчивый быт', 'У мельников появилась своя койка и своя доля работы.', ['survival', 'wellbeing'], { status: 'worker', stats: { happiness: 9 } }, { apply: (s, rng) => { addRelation(s.character, s.world.year, 'Опекун', s.character.age + 27, rng); } }),
     o('independent', 'Остаться при общинном доме', 'Больше свободы и небольшая помощь общины', 'Община помогла продержаться до весны.', ['adventure', 'wealth'], { wealth: 6, reputation: 3 }),

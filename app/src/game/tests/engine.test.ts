@@ -86,7 +86,7 @@ describe('Годовой цикл', () => {
     const work = eventById.get('first-work')!;
     expect(eligible(state, school)).toBe(false);
     expect(eligible(state, work)).toBe(false);
-    state.character.age = races[state.character.race].stages[0];
+    state.character.age = races[state.character.race].stages[1] - 1;
     state.world.year += state.character.age;
     expect(eligible(state, school)).toBe(true);
     state.seen.school = state.world.year;

@@ -1,5 +1,6 @@
 'use client';
 
+import { Localize } from '../i18n/localize';
 import { ArrowRight, BookOpen, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect } from 'react';
@@ -21,16 +22,16 @@ export function Game() {
       useGame.setState({ paused: true });
     };
   }, []);
-  if (loading) return <main id="main" className="shell game-empty"><Loading /></main>;
-  if (!state) return <main id="main" className="shell game-empty">
+  if (loading) return <Localize><main id="main" className="shell game-empty"><Loading /></main></Localize>;
+  if (!state) return <Localize><main id="main" className="shell game-empty">
     <StorageStatus />
     <section className="panel action-card"><p className="eyebrow"><BookOpen size={16} /> Жизнь в Эларионе</p><h1>Пока здесь пусто</h1><p>Начни новую жизнь или открой сохранение из архива.</p>
       <div className="summary-actions"><button className="button primary" onClick={newLife} disabled={saving}>Начать жизнь <ArrowRight size={16} /></button><Link className="button" href="/archive/">Архив</Link></div>
     </section>
-  </main>;
+  </main></Localize>;
   const c = state.character;
-  if (!state.revealed) return <BirthReveal key={state.saveId} state={state} />;
-  return <main id="main" className="game-page" key={state.saveId}>
+  if (!state.revealed) return <Localize><BirthReveal key={state.saveId} state={state} /></Localize>;
+  return <Localize><main id="main" className="game-page" key={state.saveId}>
     <TimeControls state={state} />
     <div className="shell game-main">
       <StorageStatus />
@@ -49,5 +50,5 @@ export function Game() {
         <aside className="world-column column" aria-label="Семья и мир"><FamilyPanel state={state} /><LifeProgress state={state} /><WorldActions state={state} /><WorldGazette state={state} /><ContextPanels state={state} /></aside>
       </div>
     </div>
-  </main>;
+  </main></Localize>;
 }

@@ -8,12 +8,17 @@ export const paths = {
   merchant: { name: 'Торговец', verb: 'Пути, рынки и договоры', priority: 'wealth', story: 'Караваны, новые рынки и влияние через торговлю.', categories: ['economy', 'work', 'travel'] },
   villain: { name: 'Злодей', verb: 'Сделки в тени и раскол', priority: 'influence', story: 'Сеть осведомителей, шантаж и последствия для всей страны.', categories: ['politics', 'economy', 'war'] },
   keeper: { name: 'Хранитель', verb: 'Забота и память общины', priority: 'wellbeing', story: 'Лечебницы, школы, взаимопомощь и наследие.', categories: ['family', 'education', 'legacy'] },
+  healer: { name: 'Целитель', verb: 'Лечение и помощь больным', priority: 'survival', story: 'Полевые лечебницы, лечение эпидемий и доверие пациентов.', categories: ['health', 'family'] },
+  scholar: { name: 'Учёный', verb: 'Исследования и открытия', priority: 'knowledge', story: 'Экспедиции, публичные школы и проверка древних знаний.', categories: ['education', 'magic', 'work'] },
+  ranger: { name: 'Следопыт', verb: 'Дикие земли и дальние дороги', priority: 'adventure', story: 'Разведка маршрутов, защита лесов и встречи на границах.', categories: ['travel', 'war', 'health'] },
+  bard: { name: 'Бард', verb: 'Песни, память и общественный голос', priority: 'wellbeing', story: 'Выступления, споры за авторство и песни, способные примирять города.', categories: ['society', 'relations', 'legacy'] },
+  artificer: { name: 'Изобретатель', verb: 'Механизмы и большие стройки', priority: 'knowledge', story: 'Мастерские, водоподъёмные машины и открытия для всей страны.', categories: ['work', 'economy', 'education'] },
 } satisfies Record<string, { name: string; verb: string; priority: Priority; story: string; categories: string[] }>;
 export type PathId = keyof typeof paths;
 export const pathIds = Object.keys(paths) as PathId[];
 
 type CityNote = { x: number; y: number; roles: readonly PathId[]; text: string };
-type Country = { color: string; border: string; label: [number, number]; lore: string; title: string; leaders: readonly string[]; notable: [string, string, string]; cities: [CityNote, CityNote, CityNote] };
+type Country = { color: string; border: string; label: [number, number]; lore: string; title: string; leaders: readonly string[]; notable: [string, string, string]; cities: readonly CityNote[] };
 
 export const atlas = {
   valoria: {
@@ -82,14 +87,81 @@ export const atlas = {
       { x: 614, y: 376, roles: ['villain', 'mage', 'hero'], text: 'Свободный город на краю руин. За находки спорят архивисты и посредники.' },
     ],
   },
+  aurelian: {
+    color: '#a79347', border: 'M90 590 170 552 265 566 328 605 356 674 315 752 221 777 135 730 80 656Z', label: [215, 605],
+    lore: 'Лига вышла из состава Валории после войны за соляные пошлины. Города выбирают консулов и считают, что корона присваивает доход с общих торговых путей. Общий человеческий язык не мешает старому пограничному спору.', title: 'Консул Лиги', leaders: ['Лисса Соляная', 'Консул Марек', 'Орен Медный', 'Нора Избранная'], notable: ['Денна Судовая', 'Капитан соляных обозов', 'Оспаривает валорийские пошлины на суше и на море.'],
+    cities: [
+      { x: 210, y: 650, roles: ['politician', 'villain'], text: 'Сенат и верфи борются за голоса кварталов.' },
+      { x: 137, y: 639, roles: ['merchant', 'bard'], text: 'Гавань принимает суда из обеих человеческих держав.' },
+      { x: 279, y: 696, roles: ['merchant', 'artificer'], text: 'Здесь проверяют меру соли и спорят о новых насосах.' },
+      { x: 205, y: 723, roles: ['warrior', 'ranger'], text: 'Дозор следит за проливом и принимает беглых гонцов.' }
+    ],
+  },
+  duskwood: {
+    color: '#536a93', border: 'M931 62 1025 43 1113 82 1138 143 1098 222 1030 249 960 221 919 149Z', label: [1027, 95],
+    lore: 'Сумеречные дома ушли из Сильванора после спора о праве хранить личные воспоминания в общем архиве. Князья защищают тайну домов, а молодые учёные требуют доступа к старым записям.', title: 'Носитель сумеречной печати', leaders: ['Эйра Непрочитанная', 'Тэйрен Тихий', 'Лисэль Закатная', 'Ориэн Лунный'], notable: ['Вэйла Зеркальная', 'Хранительница запретных писем', 'Сверяет родовые истории с уцелевшими письмами.'],
+    cities: [
+      { x: 1024, y: 143, roles: ['politician', 'mage'], text: 'Княжеские печати открывают двери к личным архивам.' },
+      { x: 967, y: 178, roles: ['scholar', 'keeper'], text: 'Архив хранит книги домов, согласившихся на открытое чтение.' },
+      { x: 1080, y: 188, roles: ['mage', 'healer'], text: 'В зеркальных водах исследуют остаточные чары.' },
+      { x: 1035, y: 219, roles: ['bard', 'ranger'], text: 'Праздник дворов собирает песни нескольких эпох.' }
+    ],
+  },
+  ironreach: {
+    color: '#876348', border: 'M926 284 1002 265 1100 283 1145 349 1115 420 1046 458 951 423 909 354Z', label: [1022, 309],
+    lore: 'Гномьи артели Предела отказались от наследственных клановых мест. Голос получает мастерская, открывшая книги расходов. Карак-Дум считает эту систему угрозой древнему Своду Мер.', title: 'Первый делегат артелей', leaders: ['Рунна Клёпаная', 'Борин Счётчик', 'Делегат Эрк', 'Далия Рудная'], notable: ['Норка Шестерня', 'Инженер подъёмных машин', 'Делает общедоступные чертежи шахтных подъёмников.'],
+    cities: [
+      { x: 1012, y: 355, roles: ['politician', 'scholar'], text: 'Выборный круг артелей принимает людей любого происхождения.' },
+      { x: 963, y: 388, roles: ['warrior', 'artificer'], text: 'Кузницы снабжают заставы и испытывают новые сплавы.' },
+      { x: 1087, y: 347, roles: ['mage', 'scholar'], text: 'Стеклянная башня хранит наблюдения о тепле и магии.' },
+      { x: 1064, y: 413, roles: ['artificer', 'merchant'], text: 'Город вырос вокруг системы подъёмников и грузовых площадок.' }
+    ],
+  },
+  moonfen: {
+    color: '#6c8560', border: 'M943 514 1037 489 1141 521 1190 600 1158 696 1072 743 978 704 922 612Z', label: [1050, 545],
+    lore: 'Общины Лунных Маршей объединяет обязанность беречь звериные тропы. Клятва союза важнее вида зверолюда, а право голоса получают те, кто сопровождает чужую семью через опасный сезон.', title: 'Голос лунного совета', leaders: ['Кира Тропная', 'Фенн Серый След', 'Рэйна Речная', 'Торен Дозорный'], notable: ['Нэйя Ночная', 'Проводница зимних стоянок', 'Помнит дороги, исчезающие под водой после дождей.'],
+    cities: [
+      { x: 1018, y: 587, roles: ['ranger', 'hero'], text: 'Проводники сопровождают семьи по временным тропам.' },
+      { x: 1095, y: 593, roles: ['politician', 'keeper'], text: 'Общий совет принимает решения после рассказов свидетелей.' },
+      { x: 988, y: 657, roles: ['bard', 'merchant'], text: 'Ночная ярмарка освещена сотнями лисьих фонарей.' },
+      { x: 1106, y: 681, roles: ['healer', 'mage'], text: 'Целители выращивают водяные травы у серебряных источников.' }
+    ],
+  },
+  hearthshire: {
+    color: '#8c804f', border: 'M460 588 548 553 650 567 736 616 755 694 706 767 605 801 510 771 445 681Z', label: [602, 602],
+    lore: 'Кантоны Холмов возникли вокруг договоров о взаимном страховании урожая. Полурослики защищают право оставить часть зерна соседям даже при требовании внешнего кредитора.', title: 'Избранный хранитель кантонов', leaders: ['Роза Луговая', 'Тобин Медовый', 'Нелли Утренний Хлеб', 'Одо Холмовой'], notable: ['Пиппа Чернильная', 'Составительница сельских договоров', 'Учит деревни читать условия займов до подписания.'],
+    cities: [
+      { x: 524, y: 644, roles: ['keeper', 'healer'], text: 'Общая лечебница принимает приезжих без поручительства.' },
+      { x: 650, y: 640, roles: ['merchant', 'bard'], text: 'Ярмарка мёда и песенные состязания проходят каждый урожай.' },
+      { x: 581, y: 709, roles: ['ranger', 'scholar'], text: 'Кантон ведёт открытые записи о садах и погоде.' },
+      { x: 685, y: 716, roles: ['artificer', 'hero'], text: 'Общие печи служат убежищем во время зимних бурь.' }
+    ],
+  },
+  emberfall: {
+    color: '#a45655', border: 'M1196 158 1274 126 1365 174 1400 251 1373 344 1291 411 1215 374 1166 294Z', label: [1280, 191],
+    lore: 'Города Пепельных престолов спорят о том, кто вправе хранить драконьи кладки и древние клятвы. Правитель считается хранителем договора, а не владельцем всех рождённых под его печатью.', title: 'Хранитель пепельного договора', leaders: ['Сария Тлеющая', 'Варекс Медный', 'Кэсса Рассветная', 'Тэрон Обсидиан'], notable: ['Ишра Свет Угля', 'Исследовательница вулканических полей', 'Ищет способ предсказывать выбросы и спасти прибрежные города.'],
+    cities: [
+      { x: 1262, y: 244, roles: ['politician', 'warrior'], text: 'Престол держится на договорах домов и военных союзов.' },
+      { x: 1230, y: 319, roles: ['merchant', 'villain'], text: 'Обсидиановые доки принимают дорогие и опасные грузы.' },
+      { x: 1337, y: 278, roles: ['scholar', 'mage'], text: 'Обсерватория изучает звёзды сквозь красный вулканический свет.' },
+      { x: 1308, y: 356, roles: ['healer', 'artificer'], text: 'Террасы отводят жар и воду от жилых кварталов.' }
+    ],
+  },
 } satisfies Record<RegionId, Country>;
 
 export const neighbours: Record<RegionId, readonly RegionId[]> = {
-  valoria: ['sylvanor', 'frontier', 'grimm'], sylvanor: ['valoria', 'karak', 'frontier'],
-  karak: ['sylvanor', 'steppes', 'frontier'], steppes: ['karak', 'frontier'],
-  grimm: ['valoria', 'frontier'], frontier: ['valoria', 'sylvanor', 'karak', 'steppes', 'grimm'],
+  valoria: ['sylvanor', 'frontier', 'grimm', 'aurelian'], sylvanor: ['valoria', 'karak', 'frontier', 'duskwood'],
+  karak: ['sylvanor', 'steppes', 'frontier', 'ironreach'], steppes: ['karak', 'frontier', 'emberfall'],
+  grimm: ['valoria', 'frontier', 'moonfen'], frontier: ['valoria', 'sylvanor', 'karak', 'steppes', 'grimm', 'hearthshire'],
+  aurelian: ['valoria', 'hearthshire'], duskwood: ['sylvanor', 'ironreach'],
+  ironreach: ['karak', 'duskwood', 'emberfall'], moonfen: ['grimm', 'hearthshire'],
+  hearthshire: ['frontier', 'aurelian', 'moonfen'], emberfall: ['steppes', 'ironreach'],
 };
 
 export function cityNotes(region: RegionId) {
-  return atlas[region].cities.map((city, i) => ({ ...city, name: regions[region].settlements[i] }));
+  const related: Partial<Record<PathId, PathId>> = { mage: 'scholar', keeper: 'healer', hero: 'ranger', merchant: 'artificer', politician: 'bard' };
+  return atlas[region].cities.map((city, i) => {
+    const roles = [...new Set<PathId>(city.roles.flatMap(role => related[role] ? [role, related[role]!] : [role]))];
+    return { ...city, roles, name: regions[region].settlements[i] };
+  });
 }

@@ -58,6 +58,10 @@ export function moveTo(current: GameState, region: RegionId, name: string) {
 }
 
 export const actions = {
+  academy: { label: 'Открыть научное общество', paths: ['scholar'], reputation: 18, cost: 9, text: 'Образование вырастет, новые открытия станут общедоступными.' },
+  trail: { label: 'Проложить безопасный маршрут', paths: ['ranger'], reputation: 14, cost: 5, text: 'Улучшить безопасность дорог и открытость страны.' },
+  assembly: { label: 'Собрать праздник примирения', paths: ['bard'], reputation: 18, cost: 6, text: 'Снизить напряжение между общинами и расширить обмен.' },
+  irrigation: { label: 'Построить водоподъёмную машину', paths: ['artificer'], reputation: 18, cost: 12, text: 'Поднять запасы продовольствия и помочь экономике.' },
   militia: { label: 'Созвать ополчение', paths: ['warrior'], reputation: 16, cost: 6, text: 'Поднять безопасность и ослабить напряжение.' },
   ward: { label: 'Поставить защитные руны', paths: ['mage'], reputation: 12, cost: 6, text: 'Повысить безопасность и укротить всплеск магии.' },
   rescue: { label: 'Открыть убежище', paths: ['hero'], reputation: 13, cost: 6, text: 'Смягчить нехватку припасов и защитить жителей.' },
@@ -65,7 +69,7 @@ export const actions = {
   declare: { label: 'Объявить войну', paths: ['politician', 'villain'], reputation: 50, cost: 20, text: 'Открыть конфликт с соседней страной на восемь лет.' },
   trade: { label: 'Открыть торговый маршрут', paths: ['merchant'], reputation: 15, cost: 12, text: 'Запустить торговый подъём, расширить доступ к рынкам.' },
   sabotage: { label: 'Сорвать поставки', paths: ['villain'], reputation: 14, cost: 0, text: 'Получить прибыль за счёт снабжения страны.' },
-  clinic: { label: 'Основать общинную лечебницу', paths: ['keeper'], reputation: 12, cost: 9, text: 'Поднять безопасность, просвещение и остановить мор.' },
+  clinic: { label: 'Основать общинную лечебницу', paths: ['keeper', 'healer'], reputation: 12, cost: 9, text: 'Поднять безопасность, просвещение и остановить мор.' },
 } satisfies Record<string, { label: string; paths: PathId[]; reputation: number; cost: number; text: string }>;
 export type ActionId = keyof typeof actions;
 
@@ -101,6 +105,13 @@ export function actOnWorld(current: GameState, id: ActionId, target?: RegionId) 
   s.lastAct = s.world.year;
   let text = a.text;
   switch (id) {
+    case 'academy':
+      r.education = clamp(r.education + 16);
+      if (r.crisis !== 'war') { r.crisis = 'academy'; r.until = s.world.year + 7; }
+      break;
+    case 'trail': r.safety = clamp(r.safety + 14); r.openness = clamp(r.openness + 12); break;
+    case 'assembly': r.conflict = clamp(r.conflict - 18); r.openness = clamp(r.openness + 10); break;
+    case 'irrigation': r.food = clamp(r.food + 18); r.economy = clamp(r.economy + 10); break;
     case 'militia': r.safety = clamp(r.safety + 17); r.conflict = clamp(r.conflict - 9); break;
     case 'ward':
       r.magic = clamp(r.magic - 14); r.safety = clamp(r.safety + 12);

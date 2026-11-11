@@ -1,3 +1,4 @@
+import { newEraEvents } from '../content/new-era-events';
 import { extendedEvents } from '../content/turning-points';
 import { paths } from '../content/atlas';
 import { decisions } from '../content/decisions';
@@ -9,7 +10,7 @@ import { randomFrom, weighted, type RandomSource } from './random';
 import { changeStats, clamp, lifeScale, phase, record } from './rules';
 import { checkMortality } from './mortality';
 
-export const events: readonly EventDefinition[] = [...decisions, ...moments, ...extendedEvents];
+export const events: readonly EventDefinition[] = [...decisions, ...moments, ...extendedEvents, ...newEraEvents];
 export const eventById = new Map(events.map(event => [event.id, event]));
 
 export function availableChoices(s: GameState, event: EventDefinition) {
@@ -67,6 +68,7 @@ export function playEvents(s: GameState, rng: RandomSource) {
   const opening = c.age <= 2;
   if (!opening && rng.next() >= (phase(c) === 1 ? .89 : .78) / lifeScale(c)) return;
   const options = events.filter(event => eligible(s, event));
+  const recentCategories = s.chronicle.filter(row => !['stage', 'world', 'birth'].includes(row.category)).slice(-4).map(row => row.category);
   if (!options.length) return;
   const traitCategory: Partial<Record<keyof typeof traits, EventDefinition['category']>> = {
     curious: 'education', kind: 'family', ambitious: 'work', sociable: 'relations', restless: 'travel',
@@ -76,11 +78,13 @@ export function playEvents(s: GameState, rng: RandomSource) {
     knowledge: ['education', 'magic'], influence: ['politics', 'society'], adventure: ['travel', 'war'],
   };
   const { item: event } = weighted(options, event => {
-    const stageBoost = event.id === 'first-work' ? 2.4 : event.id === 'school' && relativeAge < 10 ? 1.6 : 1;
+    const stageBoost = event.id === 'first-work' ? 2.4 : event.id === 'school' && relativeAge < 10 ? .7 : 1;
     const focusBoost = focusCategories[s.priority].includes(event.category) ? 1.22 : 1;
     const pathBoost = s.path && paths[s.path].categories.includes(event.category) ? 1.38 : 1;
     const decisionBoost = event.choices ? 1.35 : 1;
-    return event.weight * stageBoost * focusBoost * pathBoost * decisionBoost * (c.traits.some(trait => traitCategory[trait] === event.category) ? 1.45 : 1);
+    const recentPenalty = recentCategories.at(-1) === event.category ? .2 : recentCategories.includes(event.category) ? .55 : 1;
+    const repeats = s.chronicle.filter(row => row.eventId === event.id).length;
+    return event.weight * recentPenalty / (1 + repeats * 2) * stageBoost * focusBoost * pathBoost * decisionBoost * (c.traits.some(trait => traitCategory[trait] === event.category) ? 1.45 : 1);
   }, rng);
   if (event.choices) openDecision(s, event, rng);
   else {

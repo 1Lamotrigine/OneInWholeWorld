@@ -1,5 +1,6 @@
 'use client';
 
+import { LanguageProvider, LanguageSelect, Localize } from '../i18n/localize';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Archive, BookOpen, Compass, Download, RotateCcw, Settings2, TriangleAlert } from 'lucide-react';
@@ -15,7 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => { void initialize(); }, [initialize]);
   const game = path.startsWith('/game');
   const archive = path.startsWith('/archive');
-  return <div className="app-shell" data-motion={motion ? 'off' : 'on'}>
+  return <LanguageProvider><Localize><div className="app-shell" data-motion={motion ? 'off' : 'on'}>
     <a className="skip-link" href="#main">К содержанию</a>
     <header className="site-header">
       <div className="shell header-inner">
@@ -29,7 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <details className="settings">
             <summary className="icon-button" aria-label="Настройки" title="Настройки"><Settings2 size={19} /></summary>
             <div className="settings-menu panel">
-              <strong>Настройки</strong>
+              <strong>Настройки</strong><LanguageSelect />
               <label><input type="checkbox" checked={motion} onChange={toggleMotion} /> Уменьшить анимацию</label>
               <p className="muted">Системная настройка уменьшения движения тоже учитывается.</p>
             </div>
@@ -38,12 +39,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     </header>
     {children}
-  </div>;
+  </div></Localize></LanguageProvider>;
 }
 
 export function StorageStatus() {
   const { state, error, loading, saving, retry, exportMode, enableExportMode } = useGame();
-  if (error) return <aside className="storage-warning panel" role="status">
+  if (error) return <Localize><aside className="storage-warning panel" role="status">
     <TriangleAlert size={20} /><div><strong>{exportMode ? 'Режим ручного экспорта' : 'Проблема с сохранением'}</strong><p>{error}</p>
       <div className="flex flex-wrap gap-2">
         <button className="button" onClick={retry} disabled={loading || saving}><RotateCcw size={16} /> Повторить</button>
@@ -51,10 +52,10 @@ export function StorageStatus() {
         {state && !state.ended && !exportMode && <button className="button" onClick={enableExportMode} disabled={loading || saving}>Играть с ручным экспортом</button>}
       </div>
     </div>
-  </aside>;
+  </aside></Localize>;
   return null;
 }
 
 export function Loading({ text = 'Восстанавливаем летопись…' }: { text?: string }) {
-  return <div className="panel loading-panel" role="status"><span className="loading-diamond" /> {text}</div>;
+  return <Localize><div className="panel loading-panel" role="status"><span className="loading-diamond" /> {text}</div></Localize>;
 }

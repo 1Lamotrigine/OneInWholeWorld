@@ -2,8 +2,8 @@ import type { PathId } from './content/atlas';
 import type { ProfessionId } from './content/professions';
 import type { Priority, RaceId, RegionId, Stats, StatusId, TraitId } from './content/world';
 
-export const SCHEMA_VERSION = 2;
-export const CONTENT_VERSION = '2.0.0';
+export const SCHEMA_VERSION = 3;
+export const CONTENT_VERSION = '3.0.0';
 export const BIRTH_YEAR = 1230;
 export const stages = ['Младенчество', 'Детство', 'Юность', 'Зрелость', 'Старость'] as const;
 export const categories = {
@@ -21,7 +21,7 @@ export type Relationship = {
 export type RegionState = {
   economy: number; safety: number; food: number; education: number;
   magic: number; conflict: number; openness: number;
-  crisis: 'war' | 'drought' | 'plague' | 'trade' | 'awakening' | 'academy' | null;
+  crisis: 'war' | 'drought' | 'plague' | 'trade' | 'awakening' | 'academy' | 'winter' | 'eruption' | 'rebellion' | 'pilgrimage' | 'invention' | 'eclipse' | null;
   until: number;
 };
 export type ChronicleEntry = {
@@ -29,7 +29,7 @@ export type ChronicleEntry = {
   text: string; tone: Tone; milestone: boolean;
 };
 export type Character = {
-  name: string; race: RaceId; origin: RegionId; region: RegionId; birthplace: string; settlement: string;
+  name: string; sex: import('./content/world').Sex; race: RaceId; origin: RegionId; region: RegionId; birthplace: string; settlement: string;
   background: StatusId; status: StatusId; age: number; longevity: number; stats: Stats;
   traits: TraitId[]; wealth: number; education: number; reputation: number; mastery: number;
   profession: ProfessionId | null; career: ProfessionId[]; employedSince: number;

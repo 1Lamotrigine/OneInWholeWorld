@@ -1,9 +1,13 @@
+import { Localize } from '../i18n/localize';
 import { MapPin } from 'lucide-react';
-import { regions, type RaceId } from '../game/content/world';
+import { regions, regionScene, type RaceId } from '../game/content/world';
 import { phase, regionState } from '../game/engine/rules';
 import type { GameState } from '../game/types';
 
 const appearance: Record<RaceId, [string, string, string, string]> = {
+  halfling: ['#c69c7f', '#e4bc99', '#6e4835', '#738057'],
+  beastfolk: ['#998472', '#d7c2a1', '#4d423b', '#5a726c'],
+  dragonborn: ['#a47266', '#cfaa83', '#674641', '#68586e'],
   human: ['#bd9075', '#e4b395', '#453534', '#556d75'],
   elf: ['#c09984', '#e1bca3', '#b39871', '#496f65'],
   dwarf: ['#b47c63', '#d3a182', '#6f4135', '#826044'],
@@ -17,8 +21,8 @@ export function Portrait({ state, compact = false }: { state: GameState; compact
   const [skin, glow, naturalHair, robe] = appearance[c.race];
   const hair = stage === 4 ? '#bab5ad' : naturalHair;
   const body = c.status === 'ruler' || c.status === 'noble' ? '#725771' : robe;
-  const ears = ['elf', 'goblin', 'orc'].includes(c.race);
-  return <svg className={compact ? 'portrait compact' : 'portrait'} viewBox="0 0 48 48" role="img" aria-label={'Портрет: ' + c.name} shapeRendering="crispEdges">
+  const ears = ['elf', 'goblin', 'orc', 'beastfolk', 'dragonborn'].includes(c.race);
+  return <Localize><svg className={compact ? 'portrait compact' : 'portrait'} viewBox="0 0 48 48" role="img" aria-label={'Портрет: ' + c.name} shapeRendering="crispEdges">
     <rect width="48" height="48" fill="#283440" />
     <path d="M0 32h48v16H0zm3-17h2v16H3zm40 0h2v16h-2zM7 9h2v2H7zm32 0h2v2h-2z" fill="#344553" />
     <path d="M6 48v-6h4v-4h8v-4h12v4h8v4h4v6z" fill={body} />
@@ -35,20 +39,20 @@ export function Portrait({ state, compact = false }: { state: GameState; compact
       {(c.status === 'noble' || c.status === 'ruler') && <path d="M15 8V5h3v2h4V4h4v3h4V5h3v5H15z" fill="#d9b77c" />}
     </g>
     <path d="M2 2h5v1H3v4H2zm39 0h5v5h-1V3h-4zM2 41h1v4h4v1H2zm43 0h1v5h-5v-1h4z" fill="#7a8276" opacity=".7" />
-  </svg>;
+  </svg></Localize>;
 }
 
 export function Scene({ state }: { state: GameState }) {
   const c = state.character;
   const r = regions[c.region];
   const crisis = regionState(state).crisis;
-  return <figure className="scene panel" aria-label={'Локация: ' + c.settlement}>
-    <div className="scene-image" data-season={state.world.year % 4} data-crisis={crisis ?? ''} style={{ backgroundImage: `url(/art/${c.region}.svg)` }}>
+  return <Localize><figure className="scene panel" aria-label={'Локация: ' + c.settlement}>
+    <div className="scene-image" data-season={state.world.year % 4} data-crisis={crisis ?? ''} style={{ backgroundImage: `url(/art/${regionScene[c.region]}.svg)` }}>
       <div className="scene-vignette" />
       <div className="scene-marker"><MapPin size={14} /> {r.name}</div>
       <div className="scene-caption"><small>Текущая локация</small><h2>{c.settlement}</h2></div>
       <div className={'scene-resident resident-' + phase(c)}><Portrait state={state} compact /></div>
     </div>
     <figcaption><MapPin size={15} /><span>{r.polity}</span><span className="caption-dot" /><span>{state.ended ? 'Последний дом' : c.region === c.origin ? 'Родные земли' : 'Новый дом'}</span></figcaption>
-  </figure>;
+  </figure></Localize>;
 }

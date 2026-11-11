@@ -29,7 +29,7 @@ describe('Роль и атлас', () => {
       expect(atlas[id].leaders.length).toBeGreaterThan(1);
       for (const other of neighbours[id]) expect(neighbours[other]).toContain(id);
     }
-    expect(new Set(regionIds.map(id => atlas[id].color)).size).toBe(6);
+    expect(new Set(regionIds.map(id => atlas[id].color)).size).toBe(regionIds.length);
     for (const path of pathIds) expect(regionIds.some(id => cityNotes(id).some(city => city.roles.some(role => role === path)))).toBe(true);
   });
 
@@ -80,12 +80,14 @@ describe('Роль и атлас', () => {
     const s = actOnWorld(takePath(grown(), 'politician'), 'declare', 'frontier');
     s.world.year += 8;
     s.character.age += 8;
-    evolveWorld(s, { next: () => 0, state: 0 });
+    evolveWorld(s, { next: () => .5, state: 0 });
     expect(s.world.fronts).toEqual([]);
     expect(s.world.regions.valoria.crisis).toBeNull();
     expect(s.world.regions.frontier.crisis).toBeNull();
-    expect(s.world.news.some(row => row.region === 'karak' && row.title === 'Смена власти')).toBe(true);
-    expect(s.world.terms.karak).toBe(1);
+    const independent = grown();
+    evolveWorld(independent, { next: () => 0, state: 0 });
+    expect(independent.world.news.some(row => row.region === 'karak' && row.title === 'Смена власти')).toBe(true);
+    expect(independent.world.terms.karak).toBe(1);
     expect(stateSchema.parse(s)).toEqual(s);
   });
 });

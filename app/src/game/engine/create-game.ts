@@ -1,4 +1,4 @@
-import { backgrounds, raceIds, races, regionIds, regions, statLabels, statusIds, traitIds, type RegionId, type Stats } from '../content/world';
+import { backgrounds, femaleNames, raceIds, races, regionIds, regions, statLabels, statusIds, traitIds, type RegionId, type Stats } from '../content/world';
 import { BIRTH_YEAR, CONTENT_VERSION, SCHEMA_VERSION, type Character, type GameState, type RegionState } from '../types';
 import { hashSeed, integer, pick, randomFrom, weighted } from './random';
 import { addRelation, clamp, record } from './rules';
@@ -30,8 +30,10 @@ export function createGame(seed: string, saveId: string): GameState {
     return [key, Math.round(clamp(base[key] + (modifiers[key] ?? 0) + resources + integer(-16, 16, rng) + (key === 'magic' && rng.next() < .08 ? 27 : 0)))];
   })) as Stats;
   const trait = pick(traitIds, rng);
+  const sex = rng.next() < .5 ? 'female' : 'male';
+  const names = culture.names.filter(name => femaleNames[race].includes(name) === (sex === 'female'));
   const c: Character = {
-    name: pick(culture.names, rng) + ' ' + pick(culture.houses, rng),
+    sex, name: pick(names, rng) + ' ' + pick(culture.houses, rng),
     race, origin, region: origin, birthplace, settlement: birthplace, background, status: background,
     age: 0, longevity: integer(culture.lifespan[0], culture.lifespan[1], rng), stats,
     traits: [trait, pick(traitIds.filter(id => id !== trait), rng)], wealth: family.wealth,
@@ -47,7 +49,7 @@ export function createGame(seed: string, saveId: string): GameState {
   const state: GameState = {
     schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, saveId, seed, rngState: rng.state, revision: 0, character: c,
     path: null, lastMove: 0, lastAct: 0,
-    world: { year: BIRTH_YEAR, news: [], fronts: [], terms: { valoria: 0, sylvanor: 0, karak: 0, steppes: 0, grimm: 0, frontier: 0 }, regions: Object.fromEntries(regionIds.map(id => {
+    world: { year: BIRTH_YEAR, news: [], fronts: [], terms: Object.fromEntries(regionIds.map(id => [id, 0])) as Record<RegionId, number>, regions: Object.fromEntries(regionIds.map(id => {
       const { economy, safety, food, education, magic, conflict, openness } = regions[id];
       return [id, { economy, safety, food, education, magic, conflict, openness, crisis: null, until: 0 }];
     })) as Record<RegionId, RegionState> },

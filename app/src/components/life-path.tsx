@@ -1,6 +1,7 @@
 'use client';
 
-import { BookOpen, Crown, Flame, HeartHandshake, Landmark, Shield, Sparkles, Sword, Wallet } from 'lucide-react';
+import { Localize } from '../i18n/localize';
+import { BookOpen, Compass, Crown, Flame, HeartHandshake, Landmark, Shield, Sparkles, Sword, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { pathIds, paths, type PathId } from '../game/content/atlas';
 import { regions, type RegionId } from '../game/content/world';
@@ -8,14 +9,14 @@ import { actionReason, actions, warTargets, type ActionId } from '../game/engine
 import type { GameState } from '../game/types';
 import { useGame } from '../stores/game-store';
 
-const icons = { warrior: Sword, mage: Sparkles, hero: Shield, politician: Crown, merchant: Wallet, villain: Flame, keeper: HeartHandshake };
-export const PathIcon = ({ path }: { path: PathId }) => { const Icon = icons[path]; return <Icon size={18} />; };
+const icons = { healer: HeartHandshake, scholar: BookOpen, ranger: Compass, bard: Sparkles, artificer: Landmark, warrior: Sword, mage: Sparkles, hero: Shield, politician: Crown, merchant: Wallet, villain: Flame, keeper: HeartHandshake };
+export const PathIcon = ({ path }: { path: PathId }) => { const Icon = icons[path]; return <Localize><Icon size={18} /></Localize>; };
 
 export function PathPicker({ state, showPicked = true }: { state: GameState; showPicked?: boolean }) {
   const { saving, takePath } = useGame();
   const [selection, select] = useState<PathId | null>(null);
-  if (state.path) return showPicked ? <p className="chosen-path"><PathIcon path={state.path} /> Жизненный путь: <strong>{paths[state.path].name}</strong></p> : null;
-  return <section className="path-picker">
+  if (state.path) return <Localize>{showPicked ? <p className="chosen-path"><PathIcon path={state.path} /> Жизненный путь: <strong>{paths[state.path].name}</strong></p> : null}</Localize>;
+  return <Localize><section className="path-picker">
     <h2>Выберите жизненный путь</h2>
     <p className="muted">Выбор останется на всю жизнь. Профессию и положение по-прежнему определят события и ваши поступки.</p>
     <div className="path-choices">{pathIds.map(id => <button key={id} className="button path-choice" onClick={() => select(id)} aria-pressed={id === selection} aria-label={paths[id].name}>
@@ -25,7 +26,7 @@ export function PathPicker({ state, showPicked = true }: { state: GameState; sho
       <p>{paths[selection].story}</p>
       <button className="button primary" onClick={() => takePath(selection)} disabled={saving}>Подтвердить путь · {paths[selection].name}</button>
     </div>}
-  </section>;
+  </section></Localize>;
 }
 
 export function WorldActions({ state }: { state: GameState }) {
@@ -35,7 +36,7 @@ export function WorldActions({ state }: { state: GameState }) {
   if (!path || state.ended) return null;
   const targets = warTargets(state);
   const selected = target && targets.includes(target) ? target : targets[0];
-  return <details className="panel data-panel">
+  return <Localize><details className="panel data-panel">
     <summary><span className="panel-label"><Landmark size={16} /> Влияние на мир</span><span aria-hidden="true">⌄</span></summary>
     <div className="panel-body world-action-list">
       <p className="muted">Путь: {paths[path].name}. Действия затрагивают {regions[state.character.region].name}.</p>
@@ -52,12 +53,12 @@ export function WorldActions({ state }: { state: GameState }) {
         </div>;
       })}
     </div>
-  </details>;
+  </details></Localize>;
 }
 
 export function WorldGazette({ state }: { state: GameState }) {
   const [count, setCount] = useState(6);
-  return <details className="panel data-panel">
+  return <Localize><details className="panel data-panel">
     <summary><span className="panel-label"><BookOpen size={16} /> Вести из Элариона</span><span aria-hidden="true">{state.world.news.length}</span></summary>
     <div className="panel-body gazette">
       {state.world.news.length ? <ul>{state.world.news.slice(-count).reverse().map((item, index) => <li key={`${item.year}-${item.region}-${state.world.news.length - 1 - index}`}>
@@ -65,5 +66,5 @@ export function WorldGazette({ state }: { state: GameState }) {
       </li>)}</ul> : <p className="muted">Первые вести придут из разных стран с течением времени.</p>}
       {count < state.world.news.length && <button className="button" onClick={() => setCount(count + 8)}>Более ранние вести</button>}
     </div>
-  </details>;
+  </details></Localize>;
 }

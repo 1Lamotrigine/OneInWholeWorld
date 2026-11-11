@@ -1,5 +1,6 @@
 'use client';
 
+import { Localize } from '../i18n/localize';
 import { FastForward, Pause, Play, Sparkles } from 'lucide-react';
 import { useEffect } from 'react';
 import { useSimulationClock } from '../application/simulation-controller';
@@ -26,7 +27,7 @@ export function TimeControls({ state }: { state: GameState }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [togglePause, stopped]);
 
-  return <div className="time-strip">
+  return <Localize><div className="time-strip">
     <div className="shell time-inner">
       <div className="time-readout"><strong data-testid="age">{ageText(state.character.age)}</strong><span className="divider" /><span>{state.world.year} год</span>
         <span className="time-status" data-running={running}>{state.ended ? 'Завершено' : decision ? 'Ждёт решения' : paused ? 'Пауза' : 'Время идёт'}</span>
@@ -39,5 +40,5 @@ export function TimeControls({ state }: { state: GameState }) {
         <button type="button" className="button auto-button" onClick={setAutomatic} disabled={!!state.ended || saving} aria-pressed={state.automatic} aria-label="Авторежим" title="Авторежим"><Sparkles size={16} /><span>Авто</span></button>
       </div>
     </div>
-  </div>;
+  </div></Localize>;
 }

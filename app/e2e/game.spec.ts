@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { createGame } from '../src/game/engine/create-game';
 import { takePath } from '../src/game/engine/influence';
 import { serializeSave } from '../src/db/save-format';
-import { races } from '../src/game/content/world';
+import { races, regionIds, regions } from '../src/game/content/world';
 
 const settled = (page: Page) => expect(page.getByText('Сохранено на устройстве')).toBeVisible({ timeout: 15000 });
 const age = (page: Page) => page.getByTestId('age');
@@ -200,8 +200,8 @@ test('атлас показывает города, масштабируется
   const modal = page.getByRole('dialog');
   await expect(modal).toBeVisible();
   expect((await modal.boundingBox())!.width).toBeCloseTo(1440 * .7, 0);
-  await expect(modal.locator('.country-shape')).toHaveCount(6);
-  await expect(modal.locator('.map-city')).toHaveCount(18);
+  await expect(modal.locator('.country-shape')).toHaveCount(regionIds.length);
+  await expect(modal.locator('.map-city')).toHaveCount(regionIds.reduce((sum, id) => sum + regions[id].settlements.length, 0));
   await modal.getByRole('button', { name: 'Валор', exact: true }).hover();
   await expect(modal.locator('.map-tooltip')).toContainText('Политик');
   await modal.getByRole('button', { name: 'Увеличить карту' }).click();
@@ -230,4 +230,47 @@ test('атлас показывает города, масштабируется
   await page.reload();
   await settled(page);
   await expect(page.locator('.scene-caption')).toContainText('Три Башни');
+});
+
+test('пол персонажа сохраняется, пять языков переключают интерфейс и текст текущего выбора', async ({ page }) => {
+  const remote: string[] = [];
+  page.on('request', request => { if (!request.url().startsWith('http://127.0.0.1:')) remote.push(request.url()); });
+  await startLife(page);
+  const gender = await page.locator('.profile-facts div').filter({ has: page.getByText('Пол', { exact: true }) }).locator('dd').innerText();
+  expect(['Мужской', 'Женский']).toContain(gender);
+  await page.getByRole('button', { name: 'До решения' }).click();
+  await settled(page);
+  const choice = page.locator('#decision');
+  const original = await choice.getByRole('heading').innerText();
+  const originalAge = await age(page).innerText();
+  const buttons = await choice.getByRole('button').count();
+  for (const lang of ['en', 'de', 'es', 'it', 'ru']) {
+    await page.locator('.settings summary').click();
+    await page.locator('.language-select select').selectOption(lang);
+    await expect(page.locator('html')).toHaveAttribute('lang', lang);
+    await expect(page.locator('.settings')).toHaveAttribute('open', '');
+    await page.locator('.settings summary').click();
+    if (lang !== 'ru') await expect(choice.getByRole('heading')).not.toContainText(/[А-Яа-яЁё]/);
+    await expect(choice.getByRole('button')).toHaveCount(buttons);
+    await page.setViewportSize({ width: 320, height: 850 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+    await page.setViewportSize({ width: 1440, height: 960 });
+    if (lang === 'en') {
+      await page.reload();
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+      await expect(choice).toBeVisible();
+    }
+  }
+  await expect(choice.getByRole('heading')).toHaveText(original);
+  await expect(age(page)).toHaveText(originalAge);
+  await expect(page.locator('.profile-facts div').filter({ has: page.getByText('Пол', { exact: true }) }).locator('dd')).toHaveText(gender);
+  await page.locator('.brand').click();
+  await page.setViewportSize({ width: 320, height: 850 });
+  for (const lang of ['en', 'de', 'es', 'it', 'ru']) {
+    await page.locator('.settings summary').click();
+    await page.locator('.language-select select').selectOption(lang);
+    await page.locator('.settings summary').click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  }
+  expect(remote).toEqual([]);
 });

@@ -1,8 +1,9 @@
 'use client';
 
+import { Localize } from '../i18n/localize';
 import { ArrowRight, ChevronRight, MapPin, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { backgrounds, raceIds, races, regions } from '../game/content/world';
+import { backgrounds, raceIds, races, regions, sexes } from '../game/content/world';
 import type { GameState } from '../game/types';
 import { useGame } from '../stores/game-store';
 import { StorageStatus } from './app-shell';
@@ -32,7 +33,7 @@ export function BirthReveal({ state }: { state: GameState }) {
   const sequence = Array.from({ length: 26 }, (_, i) => races[raceIds[(i * 3 + c.race.length) % raceIds.length]].name);
   sequence.push(races[c.race].name);
 
-  return <main id="main" className="shell birth-page">
+  return <Localize><main id="main" className="shell birth-page">
     <StorageStatus />
     {!shown ? <section className="panel birth-ritual" aria-labelledby="ritual-title">
       <div className="ritual-art" />
@@ -50,7 +51,7 @@ export function BirthReveal({ state }: { state: GameState }) {
     </section> : <div className="birth-layout birth-revealed">
       <section className="panel birth-card" aria-labelledby="birth-heading">
         <p className="eyebrow"><Sparkles size={16} /> Рождение · {state.world.year} год</p>
-        <div className="birth-identity"><Portrait state={state} /><div><p className="muted">{races[c.race].name}</p><h1 id="birth-heading">{c.name}</h1><p><MapPin size={15} /> {c.birthplace}, {regions[c.origin].name}</p></div></div>
+        <div className="birth-identity"><Portrait state={state} /><div><p className="muted">{races[c.race].name} · {sexes[c.sex]}</p><h1 id="birth-heading">{c.name}</h1><p><MapPin size={15} /> {c.birthplace}, {regions[c.origin].name}</p></div></div>
         <p className="birth-story">{state.chronicle[0].text}</p>
         <p className="birth-status"><strong>{backgrounds[c.background].name}</strong><ChevronRight size={15} /> {backgrounds[c.status].status}</p>
         <h2>Вероятности рождения</h2><BirthOdds state={state} />
@@ -59,5 +60,5 @@ export function BirthReveal({ state }: { state: GameState }) {
       </section>
       <Scene state={state} />
     </div>}
-  </main>;
+  </main></Localize>;
 }

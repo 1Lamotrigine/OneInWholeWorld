@@ -28,7 +28,7 @@
 html { background: var(--bg); scroll-padding-top: 9rem; }
 body { color: var(--text); font: 15px/1.56 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 * { min-width: 0; }
-h1, h2, h3 { line-height: 1.17; }
+h1, h2, h3, h4 { line-height: 1.17; overflow-wrap: anywhere; hyphens: auto; }
 h1 { font: 400 clamp(1.75rem, 3vw, 2.3rem)/1.12 var(--serif); }
 h2 { font-size: 1.16rem; font-weight: 620; }
 h3 { font-size: 1rem; font-weight: 620; }
@@ -105,7 +105,8 @@ small { font-size: .82rem; }
   .home-landscape { background-position: 60% center; }
   .home-landscape::after { background: linear-gradient(0deg, #101821 1%, #101821df 39%, #10182144 75%, #10182111); }
   .home-principles { grid-template-columns: 1fr; }
-  .hero-index { top: 16px; bottom: auto; right: 16px; }
+  .hero-index { top: auto; bottom: 14px; right: 16px; }
+  .home-copy { padding-bottom: 52px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; scroll-behavior: auto !important; }
@@ -385,21 +386,21 @@ small { font-size: .82rem; }
 .atlas-heading .button, .map-toolbar .button { padding-inline: 0; }
 .atlas-layout { display: grid; grid-template-columns: minmax(0,2.65fr) minmax(190px,1fr); gap: 12px; align-items: start; }
 .map-frame { position: relative; border: 1px solid #415767; border-radius: 8px; overflow: hidden; background: #142934; }
-.world-map { display: block; width: 100%; aspect-ratio: 920 / 545; touch-action: none; cursor: grab; user-select: none; }
+.world-map { display: block; width: 100%; aspect-ratio: 1440 / 850; touch-action: none; cursor: grab; user-select: none; }
 .world-map:active { cursor: grabbing; }
 .sea-lines path { fill: none; stroke: #406173; stroke-width: 1; opacity: .65; }
 .sea-lines text { fill: #9ab0b7; font-size: 9px; letter-spacing: 1.8px; }
 .country-shape { stroke: #d4c5a4; stroke-width: 1.55; stroke-linejoin: round; cursor: pointer; }
 .country-shape[data-selected=true] { stroke: #ffe2a2; stroke-width: 2.6; }
 .country-shape[data-war=true] { stroke: #ffb0a5; stroke-dasharray: 5 3; stroke-width: 2.4; }
-.country-name { pointer-events: none; fill: #fff1d6; font: 700 18px var(--serif); text-anchor: middle; paint-order: stroke; stroke: #1a2328; stroke-width: 2.6px; }
+.country-name { pointer-events: none; fill: #fff1d6; font: 700 22px var(--serif); text-anchor: middle; paint-order: stroke; stroke: #1a2328; stroke-width: 2.6px; }
 .map-terrain { pointer-events: none; fill: none; stroke: #e0d5b7; stroke-width: 1.4; opacity: .47; }
 .map-road { stroke: #f2dcb4; stroke-dasharray: 4 3; opacity: .72; }
 .map-city { cursor: pointer; outline: none; }
 .map-city .city-dot { fill: #211c1a; stroke: #f6e2b6; stroke-width: 2.4; }
 .map-city[data-selected=true] .city-dot, .map-city:hover .city-dot, .map-city:focus-visible .city-dot { fill: #ffe5a1; stroke: #352d1e; stroke-width: 2.8; }
 .home-ring { fill: none; stroke: #a5e5b3; stroke-width: 2.2; }
-.map-city text { text-anchor: middle; fill: #fff4db; font-size: 11px; font-weight: 640; paint-order: stroke; stroke: #131e25; stroke-width: 2.5px; pointer-events: none; }
+.map-city text { text-anchor: middle; fill: #fff4db; font-size: 13px; font-weight: 640; paint-order: stroke; stroke: #131e25; stroke-width: 2.5px; pointer-events: none; }
 .map-tooltip { position: absolute; left: 8px; bottom: 8px; width: min(260px,calc(100% - 16px)); padding: 8px 10px; border: 1px solid #857451; border-radius: 6px; background: #101923f5; pointer-events: none; font-size: .79rem; }
 .map-tooltip p { color: var(--muted); }
 .map-tooltip small { color: var(--gold); font-size: .75rem; }
@@ -442,3 +443,6 @@ small { font-size: .82rem; }
   .time-actions, .time-actions .speed-group { gap: 0; }
   .country-grid, .home-paths { grid-template-columns: 1fr; }
 }
+
+.language-select { display: grid !important; gap: 4px; margin-top: 10px; }
+.language-select select { min-height: 44px; border: 1px solid var(--border); padding: 6px; border-radius: 5px; background: var(--bg); color: var(--text); }

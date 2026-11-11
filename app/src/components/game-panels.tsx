@@ -1,9 +1,10 @@
 'use client';
 
+import { Localize } from '../i18n/localize';
 import { BookOpen, ChevronDown, Coins, Globe2, Heart, Hourglass, Sparkles, UserRound, UsersRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { professions } from '../game/content/professions';
-import { backgrounds, races, regions, statLabels, traits, type Stats } from '../game/content/world';
+import { backgrounds, races, regions, sexes, statLabels, traits, type Stats } from '../game/content/world';
 import { categories, stages, type GameState } from '../game/types';
 import { lifeStage, phase, regionState } from '../game/engine/rules';
 import { crisisLabels } from '../game/engine/world';
@@ -38,27 +39,28 @@ function ResponsivePanel({ title, icon, children, extra, id }: {
     media.addEventListener('change', setDefault);
     return () => media.removeEventListener('change', setDefault);
   }, []);
-  return <details ref={panel} className="panel data-panel" id={id} open>
+  return <Localize><details ref={panel} className="panel data-panel" id={id} open>
     <summary><span className="panel-label">{icon}{title}</span>{extra}<ChevronDown className="panel-chevron" size={16} /></summary>
     <div className="panel-body">{children}</div>
-  </details>;
+  </details></Localize>;
 }
 
 export function StatBar({ label, value, tone = 'green' }: { label: string; value: number; tone?: string }) {
   const rounded = Math.round(value);
-  return <div className="stat-row">
+  return <Localize><div className="stat-row">
     <div><span>{label}</span><strong>{rounded}</strong></div>
     <div className="stat-track" role="progressbar" aria-label={label} aria-valuenow={rounded} aria-valuemin={0} aria-valuemax={100}><span style={{ width: rounded + '%', background: `var(--${tone})` }} /></div>
-  </div>;
+  </div></Localize>;
 }
 
 export function CharacterPanel({ state }: { state: GameState }) {
   const c = state.character;
-  return <div className="character-panel-wrap"><WorldMap state={state} compact /><ResponsivePanel title="Персонаж" icon={<UserRound size={16} />} extra={<span className="compact-identity"><Portrait state={state} compact /><span><strong>{c.name}</strong>{races[c.race].name} · {backgrounds[c.status].status} · здоровье {Math.round(c.stats.health)}</span></span>}>
+  return <Localize><div className="character-panel-wrap"><WorldMap state={state} compact /><ResponsivePanel title="Персонаж" icon={<UserRound size={16} />} extra={<span className="compact-identity"><Portrait state={state} compact /><span><strong>{c.name}</strong>{races[c.race].name} · {backgrounds[c.status].status} · здоровье {Math.round(c.stats.health)}</span></span>}>
     <div className="character-identity"><Portrait state={state} /><div>
       <p className="eyebrow">{races[c.race].name}</p><h2>{c.name}</h2><p className="muted">{lifeStage(c)} · {ageText(c.age)}</p>
     </div></div>
     <dl className="profile-facts">
+      <div><dt>Пол</dt><dd>{sexes[c.sex]}</dd></div>
       <div><dt>Происхождение</dt><dd>{backgrounds[c.background].name}</dd></div>
       <div><dt>Место рождения</dt><dd>{c.birthplace}, {regions[c.origin].name}</dd></div>
       <div><dt>Статус</dt><dd>{backgrounds[c.status].status}</dd></div>
@@ -74,13 +76,13 @@ export function CharacterPanel({ state }: { state: GameState }) {
       <div><dt>Репутация</dt><dd>{number.format(c.reputation)} / 100</dd></div>
       {c.mastery > 0 && <div><dt>Мастерство магии</dt><dd>{number.format(c.mastery)} / 100</dd></div>}
     </dl>
-  </ResponsivePanel></div>;
+  </ResponsivePanel></div></Localize>;
 }
 
 export function FamilyPanel({ state }: { state: GameState }) {
   const c = state.character;
   const relationships = [...c.relationships].sort((a, b) => Number(a.died !== null) - Number(b.died !== null));
-  return <ResponsivePanel title="Семья и связи" icon={<UsersRound size={16} />}>
+  return <Localize><ResponsivePanel title="Семья и связи" icon={<UsersRound size={16} />}>
     {!relationships.length ? <p className="muted">Близких в летописи пока нет.</p> :
       <ul className="family-list">
         {relationships.map(person => <li key={person.id}>
@@ -89,25 +91,25 @@ export function FamilyPanel({ state }: { state: GameState }) {
           {person.died === null && <span className="bond" aria-label={`Отношения: ${Math.round(person.bond)} из 100`}><Heart size={13} /> {Math.round(person.bond)}</span>}
         </li>)}
       </ul>}
-  </ResponsivePanel>;
+  </ResponsivePanel></Localize>;
 }
 
 export function LifeProgress({ state }: { state: GameState }) {
   const current = phase(state.character);
-  return <ResponsivePanel title="Ход жизни" icon={<Hourglass size={16} />}>
+  return <Localize><ResponsivePanel title="Ход жизни" icon={<Hourglass size={16} />}>
     <p className="stage-current">{state.ended ? 'Жизнь завершена' : stages[current]}</p>
     <ol className="life-stages" aria-label="Этапы жизни">
       {stages.map((stage, index) => <li key={stage} aria-current={index === current ? 'step' : undefined} data-past={index < current} title={stage}><span /><small>{stage}</small></li>)}
     </ol>
     <p className="muted">{ageText(state.character.age)} в летописи · {state.chronicle.length} {inflect(state.chronicle.length, ['запись', 'записи', 'записей'])}</p>
-  </ResponsivePanel>;
+  </ResponsivePanel></Localize>;
 }
 
 export function ContextPanels({ state }: { state: GameState }) {
   const c = state.character;
   const r = regionState(state);
   const fields = [['Безопасность', r.safety], ['Благосостояние', r.economy], ['Продовольствие', r.food], ['Образование', r.education], ['Магия', r.magic], ['Конфликт', r.conflict], ['Открытость', r.openness]] as const;
-  return <>
+  return <Localize><>
     <ResponsivePanel title="Черты" icon={<Sparkles size={16} />}>
       <dl className="traits-list">{c.traits.map(id => <div key={id}><dt>{traits[id][0]}</dt><dd>{traits[id][1]}</dd></div>)}</dl>
     </ResponsivePanel>
@@ -123,16 +125,16 @@ export function ContextPanels({ state }: { state: GameState }) {
         <strong>{regions[id as keyof typeof regions].name}</strong><small>{context.crisis ? crisisLabels[context.crisis] : 'Спокойная обстановка'}</small>
       </li>)}</ul></details>
     </ResponsivePanel>
-  </>;
+  </></Localize>;
 }
 
 export function BirthOdds({ state }: { state: GameState }) {
   const { birthOdds } = state;
-  return <dl className="birth-odds">
+  return <Localize><dl className="birth-odds">
     <div><dt>Раса</dt><dd>{percent.format(birthOdds.race)}</dd></div>
     <div><dt>Регион среди рождений этой расы</dt><dd>{percent.format(birthOdds.region)}</dd></div>
     <div><dt>Происхождение в этом регионе</dt><dd>{percent.format(birthOdds.background)}</dd></div>
-  </dl>;
+  </dl></Localize>;
 }
 
 export function Chronicle({ state }: { state: GameState }) {
@@ -140,7 +142,7 @@ export function Chronicle({ state }: { state: GameState }) {
   const [ascending, setAscending] = useState(false);
   const entries = state.chronicle;
   const rows = ascending ? entries.slice(0, count) : entries.slice(-count).reverse();
-  return <section id="chronicle" className="panel chronicle" aria-labelledby="chronicle-heading">
+  return <Localize><section id="chronicle" className="panel chronicle" aria-labelledby="chronicle-heading">
     <div className="chronicle-head">
       <div><span className="panel-label"><BookOpen size={16} /> Личная история</span><h2 id="chronicle-heading">Летопись жизни</h2></div>
       <button className="button sort-button" type="button" onClick={() => setAscending(!ascending)} aria-label="Изменить порядок записей">{ascending ? 'Сначала ранние' : 'Сначала новые'}</button>
@@ -153,5 +155,5 @@ export function Chronicle({ state }: { state: GameState }) {
       </li>)}
     </ol>
     {count < entries.length && <button className="button more-button" onClick={() => setCount(count + 16)}>Показать ещё · {entries.length - count}</button>}
-  </section>;
+  </section></Localize>;
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { Localize, useLanguage } from '../i18n/localize';
 import { Archive as ArchiveIcon, ArrowRight, Download, FileUp, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,9 +13,10 @@ import { useGame } from '../stores/game-store';
 import { Loading, StorageStatus } from './app-shell';
 import { ageText } from './game-panels';
 
-const date = new Intl.DateTimeFormat('ru', { dateStyle: 'medium', timeStyle: 'short' });
 
 export function Archive() {
+  const { language } = useLanguage();
+  const date = new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeStyle: 'short' });
   const router = useRouter();
   const { state, loading, saving, error: storageError, load, newLife, forget } = useGame();
   const input = useRef<HTMLInputElement>(null);
@@ -54,7 +56,7 @@ export function Archive() {
     if (input.current) input.current.value = '';
   }
 
-  return <main id="main" className="shell archive-page">
+  return <Localize><main id="main" className="shell archive-page">
     <StorageStatus />
     <div className="archive-heading">
       <div><p className="eyebrow"><ArchiveIcon size={16} /> На этом устройстве</p><h1>Архив жизней</h1><p>Продолжай любую жизнь или возвращайся к завершённым историям. Очистка данных сайта удалит местный архив.</p></div>
@@ -85,5 +87,5 @@ export function Archive() {
             <button className="button" disabled={disabled} aria-label={'Удалить ' + row.title} onClick={() => setRemoveId(row.id)}><Trash2 size={17} /></button>
           </div>}
       </li>)}</ul>}
-  </main>;
+  </main></Localize>;
 }

@@ -1,5 +1,5 @@
 import { profession, type ProfessionId } from '../content/professions';
-import { races, regions, type RegionId, type Stats } from '../content/world';
+import { races, regions, workRegion, type RegionId, type Stats } from '../content/world';
 import { stages, type Category, type Character, type GameState, type Relationship, type Tone } from '../types';
 import { pick, type RandomSource } from './random';
 
@@ -34,7 +34,7 @@ export function canWork(c: Character, id: ProfessionId) {
   const job = profession(id);
   return isAdult(c) && !c.retired && c.stats.health >= 28 && c.education >= (job.education ?? 0)
     && c.stats.strength >= (job.strength ?? 0) && c.stats.magic >= (job.magic ?? 0)
-    && c.wealth >= (job.capital ?? 0) && (!job.regions || job.regions.includes(c.region))
+    && c.wealth >= (job.capital ?? 0) && (!job.regions || job.regions.includes(workRegion[c.region]))
     && (id !== 'mentor' || c.mastery >= 20)
     && (!['courtier', 'steward'].includes(id) || c.reputation >= (id === 'steward' ? 75 : 52) || c.status === 'ruler');
 }
@@ -49,7 +49,7 @@ export function employ(c: Character, id: ProfessionId) {
 export function relocate(c: Character, destination: RegionId, rng: RandomSource) {
   c.region = destination;
   c.settlement = pick(regions[destination].settlements, rng);
-  if (c.profession && profession(c.profession).regions && !profession(c.profession).regions?.includes(destination)) {
+  if (c.profession && profession(c.profession).regions && !profession(c.profession).regions?.includes(workRegion[destination])) {
     c.profession = null;
   }
 }

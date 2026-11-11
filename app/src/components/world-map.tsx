@@ -1,5 +1,6 @@
 'use client';
 
+import { Localize } from '../i18n/localize';
 import { Compass, Map, MapPin, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { atlas, cityNotes, paths } from '../game/content/atlas';
@@ -9,8 +10,8 @@ import { crisisLabels } from '../game/engine/world';
 import type { GameState } from '../game/types';
 import { useGame } from '../stores/game-store';
 
-const width = 920;
-const height = 545;
+const width = 1440;
+const height = 850;
 const initialView = { x: 0, y: 0, zoom: 1 };
 const cities = Object.fromEntries(regionIds.map(id => [id, cityNotes(id)])) as Record<RegionId, ReturnType<typeof cityNotes>>;
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
@@ -81,7 +82,7 @@ export function WorldMap({ state, compact = false }: { state?: GameState; compac
     setView(bounded(start.view.x - dx * width / box.width / start.view.zoom, start.view.y - dy * height / box.height / start.view.zoom, start.view.zoom));
   }
 
-  return <>
+  return <Localize><>
     <button className={compact ? 'button map-launch' : 'button'} title="Карта мира" aria-label="Карта мира" onClick={launch}>
       <Map size={17} />{!compact && 'Карта мира'}
     </button>
@@ -178,5 +179,5 @@ export function WorldMap({ state, compact = false }: { state?: GameState; compac
         </div>
       </div>}
     </dialog>
-  </>;
+  </></Localize>;
 }
