@@ -111,7 +111,7 @@ export function simulateYear(current: GameState): GameState {
       record(s, 'stage-' + phase(c), 'stage', lifeStage(c), 'Начинается новый этап жизни.', 'neutral', true);
     }
     needs(s);
-    developPath(s);
+    developPath(s, rng);
     familyAndSociety(s, rng);
     evolveWorld(s, rng);
     healthChanges(s, rng);

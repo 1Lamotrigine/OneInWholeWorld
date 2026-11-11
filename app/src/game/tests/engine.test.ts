@@ -4,9 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { races, raceIds, regions, regionIds, statLabels } from '../content/world';
 import { BIRTH_YEAR, type GameState } from '../types';
 import { createGame } from '../engine/create-game';
-import { applyChoice, availableChoices, eligible, eventById, events } from '../engine/events';
+import { ageAppropriate, applyChoice, availableChoices, eligible, eventById, events } from '../engine/events';
 import { hashSeed, randomFrom, weighted } from '../engine/random';
-import { phase } from '../engine/rules';
 import { advanceToDecision, simulateYear, yearDuration } from '../engine/simulate-year';
 import { deserializeSave, serializeSave, stateSchema } from '../../db/save-format';
 
@@ -161,7 +160,7 @@ describe('Годовой цикл', () => {
       for (let turn = 0; turn < 1200 && !s.ended; turn++) {
         if (s.pending) {
           const event = eventById.get(s.pending.eventId)!;
-          if (!event.stages.includes(phase(s.character))) throw new Error('Событие выбрано вне возрастного этапа');
+          if (!ageAppropriate(s, event)) throw new Error('Событие выбрано вне возрастного этапа');
           const choices = availableChoices(s, event).filter(choice => s.pending!.optionIds.includes(choice.id));
           if (choices.length < 2 || choices.length > 4) throw new Error('Некорректное число решений');
           s = applyChoice(s, s.pending.token, choices[index % choices.length].id);

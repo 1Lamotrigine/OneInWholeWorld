@@ -1,9 +1,10 @@
+import { territoryNames } from '../game/engine/geopolitics';
 import { projectIds } from '../game/content/projects';
 import { z } from 'zod';
 import { neighbours, pathIds } from '../game/content/atlas';
 import { professions } from '../game/content/professions';
 import { backgrounds, sexes, femaleNames, priorities, races, regions, statLabels, traits, regionIds } from '../game/content/world';
-import { eventById, availableChoices } from '../game/engine/events';
+import { eventById, availableChoices, ageAppropriate } from '../game/engine/events';
 import { phase } from '../game/engine/rules';
 import { BIRTH_YEAR, CONTENT_VERSION, SCHEMA_VERSION, categories, type GameState } from '../game/types';
 
@@ -30,7 +31,8 @@ function upgradeState(raw: unknown) {
   const legacy = raw.schemaVersion === 1 && raw.contentVersion === '1.0.0';
   const versionTwo = raw.schemaVersion === 2 && raw.contentVersion === '2.0.0';
   const versionThree = raw.schemaVersion === 3 && raw.contentVersion === '3.0.0';
-  if (!legacy && !versionTwo && !versionThree) return raw;
+  const versionFour = raw.schemaVersion === 4 && raw.contentVersion === '4.0.0';
+  if (!legacy && !versionTwo && !versionThree && !versionFour) return raw;
   if (!('world' in raw) || !raw.world || typeof raw.world !== 'object'
     || !('regions' in raw.world) || !raw.world.regions || typeof raw.world.regions !== 'object'
     || !('character' in raw) || !raw.character || typeof raw.character !== 'object') return raw;
@@ -52,13 +54,17 @@ function upgradeState(raw: unknown) {
       experience = Math.max(0, character.age - races[raceId].stages[1]) / Math.sqrt(races[raceId].lifespan[1] / 95) * .9;
     }
   }
+  const pending = 'pending' in raw && raw.pending && typeof raw.pending === 'object' && 'eventId' in raw.pending
+    ? eventById.get(String(raw.pending.eventId)) : undefined;
+  const invalidPending = pending && 'race' in character && typeof character.race === 'string' && Object.hasOwn(races, character.race) && 'age' in character && typeof character.age === 'number'
+    && !ageAppropriate({ character } as GameState, pending);
   return {
-    ...raw, schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION,
+    ...raw, ...(invalidPending ? { pending: null } : {}), schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION,
     ...(legacy ? { path: null, lastMove: 0, lastAct: 0 } : {}),
-    pathExperience: experience,
-    character: { ...character, sex: versionThree && 'sex' in character ? character.sex : sex },
+    pathExperience: versionFour && 'pathExperience' in raw ? raw.pathExperience : experience,
+    character: { ...character, sex: (versionThree || versionFour) && 'sex' in character ? character.sex : sex },
     world: {
-      ...previous, projects: [], ...(legacy ? { news: [], fronts: [] } : {}),
+      ...previous, projects: versionFour && 'projects' in previous ? previous.projects : [], control: Object.fromEntries(regionIds.flatMap(id => regions[id].settlements.map(name => [name, id]))), alliances: [], ...(legacy ? { news: [], fronts: [] } : {}),
       terms: { ...Object.fromEntries(regionIds.map(id => [id, 0])), ...('terms' in previous && typeof previous.terms === 'object' ? previous.terms : {}) },
       regions: { ...initialRegions, ...previousRegions },
     },
@@ -89,6 +95,8 @@ export const stateSchema: z.ZodType<GameState> = z.preprocess(upgradeState, z.ob
       id, region, kind: z.enum(projectIds), founder: line(), title: line(),
       started: whole(3000, BIRTH_YEAR), until: whole(3000, BIRTH_YEAR),
     })).max(48),
+    control: z.record(z.string(), region),
+    alliances: z.array(z.object({ first: region, second: region, until: whole(3000, BIRTH_YEAR) })).max(5),
     fronts: z.array(z.object({ from: region, to: region, until: whole(3000, BIRTH_YEAR) })).max(6),
   }),
   birthOdds: z.object({ race: range(1, Number.MIN_VALUE), region: range(1, Number.MIN_VALUE), background: range(1, Number.MIN_VALUE) }),
@@ -113,6 +121,10 @@ export const stateSchema: z.ZodType<GameState> = z.preprocess(upgradeState, z.ob
   if (regionIds.some(id => { const r = s.world.regions[id]; return r.crisis ? r.until <= s.world.year : r.until !== 0; })) fail('Некорректный срок кризиса.');
   if (s.world.projects.some(project => project.id !== project.region + '-' + project.kind || project.started > s.world.year || project.until <= s.world.year || project.until <= project.started)
     || new Set(s.world.projects.map(project => project.id)).size !== s.world.projects.length) fail('Некорректные долгосрочные последствия.');
+  if (Object.keys(s.world.control).length !== territoryNames.length || territoryNames.some(name => !s.world.control[name])) fail('Некорректные территории.');
+  const pactIds = s.world.alliances.map(pact => [pact.first, pact.second].sort().join('-'));
+  if (new Set(pactIds).size !== pactIds.length || s.world.alliances.some(pact => pact.first === pact.second || pact.until <= s.world.year
+    || !Object.values(s.world.control).includes(pact.first) || !Object.values(s.world.control).includes(pact.second))) fail('Некорректные союзы.');
   const fronts = s.world.fronts.flatMap(front => [front.from, front.to]);
   if (s.lastMove > s.world.year || s.lastAct > s.world.year || s.world.news.some(row => row.year > s.world.year)
     || new Set(fronts).size !== fronts.length || s.world.fronts.some(front =>
@@ -129,7 +141,7 @@ export const stateSchema: z.ZodType<GameState> = z.preprocess(upgradeState, z.ob
   if (s.pending) {
     const event = eventById.get(s.pending.eventId);
     const choiceIds = event ? availableChoices(s, event).map(choice => choice.id) : [];
-    if (s.ended || !event?.stages.includes(phase(c)) || s.seen[s.pending.eventId] !== s.world.year
+    if (s.ended || (!event || !ageAppropriate(s, event)) || s.seen[s.pending.eventId] !== s.world.year
       || s.pending.token !== `${s.world.year}-${s.pending.eventId}`
       || new Set(s.pending.optionIds).size !== s.pending.optionIds.length
       || s.pending.optionIds.some(id => !choiceIds.includes(id))) fail('Ожидающее решение повреждено.');

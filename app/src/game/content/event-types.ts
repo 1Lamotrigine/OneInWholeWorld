@@ -13,9 +13,10 @@ export type Choice = {
   cost?: number; when?: (state: GameState) => boolean; effect?: Effect; apply?: Consequence;
   gamble?: { chance: (state: GameState) => number; failure: string; effect: Effect };
   later?: { eventId: string; years: number };
+  uncertain?: { good: { text: string; effect: Effect; apply?: Consequence; later?: Choice['later'] }; bad: { text: string; effect: Effect; apply?: Consequence; later?: Choice['later'] } };
 };
 export type EventDefinition = {
-  id: string; path?: PathId; category: Category; title: string; text: string; weight: number;
+  id: string; minAge?: number; path?: PathId; category: Category; title: string; text: string; weight: number;
   stages: readonly number[]; when?: (state: GameState) => boolean; cooldown?: number;
   tone?: Tone; milestone?: boolean; effect?: Effect; apply?: Consequence; choices?: Choice[];
 };
@@ -37,7 +38,7 @@ export function moment(
 
 export function decision(
   id: string, category: Category, stages: readonly number[], title: string, text: string,
-  choices: Choice[], options: Partial<Pick<EventDefinition, 'when' | 'weight' | 'cooldown' | 'path'>> = {},
+  choices: Choice[], options: Partial<Pick<EventDefinition, 'when' | 'weight' | 'cooldown' | 'path' | 'minAge'>> = {},
 ): EventDefinition {
   return { id, category, stages, title, text, choices, weight: 7, milestone: true, ...options };
 }

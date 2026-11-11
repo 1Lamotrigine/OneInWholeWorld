@@ -3,6 +3,8 @@
 import { Localize } from '../i18n/localize';
 import { Compass, Map, MapPin, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { territories } from '../game/content/territory-shapes';
+import { controller, holdings, independentCountry } from '../game/engine/geopolitics';
 import { CityOpportunity } from './path-impact';
 import { atlas, cityNotes, paths, type PathId } from '../game/content/atlas';
 import { regionIds, regions, type RegionId } from '../game/content/world';
@@ -39,11 +41,11 @@ export function WorldMap({ state, compact = false }: { state?: GameState; compac
   const { saving, moveTo } = useGame();
   const country = atlas[selected.region];
   const city = cities[selected.region][selected.city];
-  const inspectedPath = inspection && city.roles.includes(inspection) ? inspection
-    : state?.path && city.roles.includes(state.path) ? state.path : city.roles[0];
+  const inspectedPath = inspection ?? state?.path ?? city.roles[0];
   const tooltip = hover && cities[hover.region][hover.city];
   const local = state?.world.regions[selected.region];
   const front = state?.world.fronts.find(front => front.from === selected.region || front.to === selected.region);
+  const sovereign = state ? controller(state, city.name) : selected.region;
   const offer = state && moveOffer(state, selected.region, city.name);
 
   useEffect(() => {
@@ -118,12 +120,18 @@ export function WorldMap({ state, compact = false }: { state?: GameState; compac
                   <path d="M25 102h95m-80 11h65M20 334h95m-65 12h80M78 420h94m-75 13h61M115 484h109m-93 13h65M765 74h109m-90 13h71m-61 330h92m-61 13h67M659 478h166m-119 13h84" />
                   <text x="92" y="370">МОРЕ СЕМИ МЕЛЬНИЦ</text><text x="668" y="506">ПРОЛИВ ФОНАРЕЙ</text>
                 </g>
+                <defs>{regionIds.map(region => <clipPath key={region} id={`${id}-${region}`}><path d={atlas[region].border} /></clipPath>)}</defs>
                 {regionIds.map(region => {
                   const data = atlas[region];
                   return <g key={region}>
                     <path className="country-shape" d={data.border} fill={data.color} data-selected={selected.region === region} data-war={state?.world.regions[region].crisis === 'war'}
                       onClick={() => { select({ region, city: 0 }); setArrival(''); }} />
-                    <text className="country-name" x={data.label[0]} y={data.label[1]}>{regions[region].name}</text>
+                    {state && <g clipPath={`url(#${id}-${region})`}>{territories[region].map(territory => {
+                      const owner = controller(state, territory.name);
+                      return <polygon key={territory.name} points={territory.points} fill={atlas[owner].color} stroke="#d8d2ad" strokeWidth="1.4"
+                        onClick={() => { select({ region, city: cities[region].findIndex(city => city.name === territory.name) }); setArrival(''); }} />;
+                    })}</g>}
+                    <text className="country-name" x={data.label[0]} y={data.label[1]}>{regions[region].name}{state && !independentCountry(state, region) ? ' †' : ''}</text>
                   </g>;
                 })}
                 <g className="map-terrain" aria-hidden="true">
@@ -170,15 +178,22 @@ export function WorldMap({ state, compact = false }: { state?: GameState; compac
                 {regionIds.map(region => <optgroup key={region} label={regions[region].name}>{cities[region].map((place, i) => <option key={place.name} value={`${region}:${i}`}>{place.name}</option>)}</optgroup>)}
               </select>
             </label>
+            {state && <div className="city-opportunity"><strong>Политическая карта</strong>
+              <p>Контроль над городом: {regions[sovereign].name}</p>
+              <p>{independentCountry(state, selected.region) ? 'Независимая страна' : 'Независимость утрачена'} · Территорий: {holdings(state, selected.region).length}</p>
+              <p>Союзники: {state.world.alliances.filter(pact => pact.first === selected.region || pact.second === selected.region)
+                .map(pact => regions[pact.first === selected.region ? pact.second : pact.first].name + ' · ' + pact.until).join(', ') || 'Нет'}</p>
+              <small>Цвет территории показывает текущего правителя. Тонкие линии разделяют городские территории; исторические названия сохраняются после завоевания.</small>
+            </div>}
             <h4>{city.name}</h4><p>{city.text}</p>
             <div className="atlas-tags">{city.roles.map(role => <span key={role}>{paths[role].name}</span>)}</div>
             <label className="city-select city-role-select">Преимущества для роли
               <select value={inspectedPath} onChange={event => setInspection(event.target.value as PathId)}>
-                {city.roles.map(role => <option key={role} value={role}>{paths[role].name}</option>)}
+                {(Object.keys(paths) as PathId[]).map(role => <option key={role} value={role}>{paths[role].name}</option>)}
               </select>
             </label>
             <CityOpportunity path={inspectedPath} state={state} region={selected.region} settlement={city.name} />
-            {state?.path && !city.roles.includes(state.path) && <p className="city-mismatch">Ваш путь здесь не получает профильной поддержки.</p>}
+            {state?.path && !city.roles.includes(state.path) && <p className="city-mismatch">Ваш путь здесь получает карьерные штрафы. Сравните условия до переезда.</p>}
             {offer && <div className="map-move">
               <button className="button primary" disabled={!!offer.reason || saving} onClick={() => {
                 moveTo(selected.region, city.name);

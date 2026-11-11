@@ -85,10 +85,14 @@ const quietYears: [string, Category, string, string, Effect][] = [
 ];
 newEraEvents.push(...quietYears.map(([id, category, title, text, effect]) => moment(id, category, category === 'childhood' ? child : category === 'legacy' ? old : all, title, text, effect, { weight: 5 })));
 newEraEvents.push(decision('travelling-companion', 'relations', independent, 'Попутчик с записной книжкой', 'Попутчик записывает названия мест, где ему помогли. Он предлагает обменяться адресами.', [
-  option('exchange', 'Оставить свой адрес', 'Знакомство, которое может пригодиться позже', 'В книжке появился адрес твоего дома.', ['wellbeing'], { stats: { happiness: 3 } }, {
-    apply: (s, rng) => { if (s.character.relationships.length < 190) addRelation(s.character, s.world.year, 'Друг', s.character.age, rng); },
-    later: { eventId: 'traveller-returns', years: 7 },
+  option('exchange', 'Оставить свой адрес', 'Возможная связь, но адрес может попасть к ворам. Исход неизвестен.', '', ['wellbeing'], { wealth: -2 }, {
+    uncertain: {
+      good: { text: 'В книжке появился адрес твоего дома. Намерения попутчика пока неизвестны.', effect: {}, later: { eventId: 'traveller-returns', years: 7 } },
+      bad: { text: 'В книжке появился адрес твоего дома. Намерения попутчика пока неизвестны.', effect: {}, later: { eventId: 'traveller-theft', years: 7 } },
+    },
   }),
   option('guide', 'Показать ближайший ночлег', 'Помощь без дальнейших обязательств', 'Попутчик дошёл до постоялого двора до темноты.', ['survival'], { reputation: 3 }),
 ]));
-newEraEvents.push(moment('traveller-returns', 'relations', all, 'Адрес, записанный семь лет назад', 'Попутчик из старой встречи прислал карту безопасных стоянок. На первой странице по-прежнему записан адрес твоего дома.', { education: 5, wealth: 6 }, { weight: 0, milestone: true }));
+newEraEvents.push(moment('traveller-returns', 'relations', all, 'Адрес, записанный семь лет назад', 'Попутчик из старой встречи прислал карту безопасных стоянок. На первой странице по-прежнему записан адрес твоего дома.', { education: 5, wealth: 6 }, { weight: 0, milestone: true, apply: (s, rng) => { if (s.character.relationships.length < 200) addRelation(s.character, s.world.year, 'Друг', s.character.age, rng); } }));
+
+newEraEvents.push(moment('traveller-theft', 'society', independent, 'Адрес в чужих руках', 'Попутчик продал записи ворам. После кражи пришлось менять замки и объясняться с соседями.', { wealth: -12, reputation: -4 }, { weight: 0, tone: 'loss', milestone: true }));

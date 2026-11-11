@@ -2,8 +2,8 @@ import type { PathId } from './content/atlas';
 import type { ProfessionId } from './content/professions';
 import type { Priority, RaceId, RegionId, Stats, StatusId, TraitId } from './content/world';
 
-export const SCHEMA_VERSION = 4;
-export const CONTENT_VERSION = '4.0.0';
+export const SCHEMA_VERSION = 5;
+export const CONTENT_VERSION = '5.0.0';
 export const BIRTH_YEAR = 1230;
 export const stages = ['Младенчество', 'Детство', 'Юность', 'Зрелость', 'Старость'] as const;
 export const categories = {
@@ -37,6 +37,7 @@ export type Character = {
   conditionYears: number; lifeRisk: number; retired: boolean;
 };
 export type WorldNews = { year: number; region: RegionId; title: string; text: string };
+export type Alliance = { first: RegionId; second: RegionId; until: number };
 export type Front = { from: RegionId; to: RegionId; until: number };
 export type WorldProject = {
   id: string; region: RegionId; kind: import('./content/projects').ProjectKind;
@@ -45,7 +46,7 @@ export type WorldProject = {
 export type GameState = {
   schemaVersion: typeof SCHEMA_VERSION; contentVersion: typeof CONTENT_VERSION;
   saveId: string; seed: string; rngState: number; revision: number;
-  character: Character; world: { year: number; regions: Record<RegionId, RegionState>; news: WorldNews[]; terms: Record<RegionId, number>; fronts: Front[]; projects: WorldProject[] };
+  character: Character; world: { year: number; regions: Record<RegionId, RegionState>; news: WorldNews[]; terms: Record<RegionId, number>; fronts: Front[]; control: Record<string, RegionId>; alliances: Alliance[]; projects: WorldProject[] };
   path: PathId | null; pathExperience: number; lastMove: number; lastAct: number;
   birthOdds: { race: number; region: number; background: number };
   pending: { eventId: string; token: string; optionIds: string[] } | null;

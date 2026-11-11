@@ -1,3 +1,4 @@
+import { allied, independentCountry, evolveGeopolitics } from './geopolitics';
 import { countryModifiers } from './world-effects';
 import { atlas, neighbours } from '../content/atlas';
 import { officeHolder, publish } from './influence';
@@ -64,14 +65,14 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
       publish(s, id, crises[was].end, crises[was].relief);
       if (local) record(s, 'end-' + was, 'world', crises[was].end, crises[was].relief, 'good');
     }
-    if (!was && rng.next() < (local ? .064 : .037)) {
-      const weights = { war: 1 + current.conflict / 18, drought: 1 + (100 - current.food) / 45, plague: 1.4, trade: current.openness / 20, awakening: current.magic / 20, academy: current.education / 21, winter: 1.5, eruption: id === 'emberfall' ? 4 : .2, rebellion: current.conflict / 19, pilgrimage: current.openness / 30, invention: current.education / 28, eclipse: current.magic / 35 };
+    if (independentCountry(s, id) && !was && rng.next() < (local ? .064 : .037)) {
+      const targets = neighbours[id].filter(other => independentCountry(s, other) && !allied(s, id, other) && s.world.regions[other].crisis !== 'war');
+      const weights = { war: targets.length ? 1 + current.conflict / 18 : 0, drought: 1 + (100 - current.food) / 45, plague: 1.4, trade: current.openness / 20, awakening: current.magic / 20, academy: current.education / 21, winter: 1.5, eruption: id === 'emberfall' ? 4 : .2, rebellion: current.conflict / 19, pilgrimage: current.openness / 30, invention: current.education / 28, eclipse: current.magic / 35 };
       const { item: crisis } = weighted(crisisIds, key => weights[key] * (influence.odds[key] ?? 1), rng);
       current.crisis = crisis;
       const definition = crises[crisis];
       current.until = s.world.year + integer(definition.duration[0], definition.duration[1], rng);
       if (crisis === 'war') {
-        const targets = neighbours[id].filter(other => s.world.regions[other].crisis !== 'war');
         if (targets.length) {
           const other = pick(targets, rng);
           const opponent = s.world.regions[other];
@@ -115,6 +116,7 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
     }
     record(s, 'continental-' + phenomenon, 'world', definition.start, 'Явление затронуло несколько стран одновременно. ' + definition.text, 'neutral', true);
   }
+  evolveGeopolitics(s, rng);
 }
 
 export const crisisLabels: Record<keyof typeof crises, string> = {

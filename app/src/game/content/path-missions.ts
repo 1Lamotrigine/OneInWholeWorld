@@ -102,10 +102,10 @@ export const pathMissions: EventDefinition[] = (Object.keys(pathStories) as Path
     const tier = index + 1;
     return decision(`path-${path}-${tier}`, tier === 1 ? 'education' : 'world', tier === 1 ? independent : grown, title, text, story.kinds.map((kind, choice) =>
       option(choice === 0 ? 'open' : 'control', choice === 0 ? first : second,
-        `${projectOutlook[kind]} Влияние на ${tier === 3 ? 'вашу страну и соседей' : 'вашу страну'} на ${10 + tier * 4} лет.`,
+        `${projectOutlook[kind]} ${choice === 0 ? 'Расходы на общее дело: ' + tier * 4 + ' монет; больше знаний и доверия.' + ' Здоровье ' + '−' + tier * 2 + '.' : 'Личный доход: ' + tier * 3 + ' монет; меньше доверия, счастье −3.'} Влияние на ${tier === 3 ? 'вашу страну и соседей' : 'вашу страну'} на ${10 + tier * 4} лет.`,
         'Принятое решение меняет условия жизни страны и вероятности мировых событий.',
         choice === 0 ? ['wellbeing', 'knowledge', 'survival'] : ['wealth', 'influence', 'adventure'],
-        { reputation: 4 + tier * 3, education: tier, stats: { happiness: choice === 0 ? 2 : -1 } }, {
+        { reputation: choice === 0 ? 4 + tier * 2 : 2 + tier, education: choice === 0 ? tier * 2 : tier, wealth: choice === 0 ? -tier * 4 : tier * 3, stats: { happiness: choice === 0 ? 2 : -3, health: choice === 0 ? -tier * 2 : 0 } }, {
           apply: s => {
             const home = s.character.region;
             const affected = tier === 3 ? [home, ...neighbours[home].slice(0, 3)] : [home];

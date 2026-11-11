@@ -1,3 +1,4 @@
+import { allied, independentCountry } from './geopolitics';
 import { installProject } from './world-effects';
 import type { ProjectKind } from '../content/projects';
 import { atlas, cityNotes, neighbours, paths, type PathId } from '../content/atlas';
@@ -78,7 +79,7 @@ export const actions = {
 export type ActionId = keyof typeof actions;
 
 export function warTargets(s: GameState) {
-  return neighbours[s.character.region].filter(id => s.world.regions[id].crisis !== 'war');
+  return neighbours[s.character.region].filter(id => independentCountry(s, id) && !allied(s, s.character.region, id) && s.world.regions[id].crisis !== 'war');
 }
 
 export function actionReason(s: GameState, id: ActionId, target?: RegionId) {
@@ -94,6 +95,7 @@ export function actionReason(s: GameState, id: ActionId, target?: RegionId) {
   if (id === 'ward' && c.mastery < 3 && c.education < 15) return 'Нужно 3 мастерства или 15 образования.';
   if (id === 'peace' && r.crisis !== 'war') return 'В стране нет войны.';
   if (id === 'trade' && r.crisis === 'war') return 'Дороги закрыты из-за войны.';
+  if (id === 'declare' && !independentCountry(s, c.region)) return 'Историческая область потеряла независимость.';
   if (id === 'declare' && (r.crisis === 'war' || !target || !warTargets(s).includes(target))) return 'Нужен сосед без действующей войны, а ваша страна должна быть вне войны.';
   return '';
 }

@@ -1,3 +1,4 @@
+import { dilemmas } from '../content/dilemmas';
 import { pathMissions } from '../content/path-missions';
 import { roleInterval } from './path-development';
 import { newEraEvents } from '../content/new-era-events';
@@ -8,20 +9,26 @@ import { moments } from '../content/moments';
 import { traits, type Priority } from '../content/world';
 import type { Choice, Effect, EventDefinition } from '../content/event-types';
 import type { GameState } from '../types';
-import { randomFrom, weighted, type RandomSource } from './random';
+import { hashSeed, randomFrom, weighted, type RandomSource } from './random';
 import { changeStats, clamp, lifeScale, phase, record } from './rules';
 import { checkMortality } from './mortality';
 
-export const events: readonly EventDefinition[] = [...decisions, ...moments, ...extendedEvents, ...newEraEvents, ...pathMissions];
+export const events: readonly EventDefinition[] = [...decisions, ...moments, ...extendedEvents, ...newEraEvents, ...pathMissions, ...dilemmas];
 export const eventById = new Map(events.map(event => [event.id, event]));
 
 export function availableChoices(s: GameState, event: EventDefinition) {
   return (event.choices ?? []).filter(choice => (choice.cost ?? 0) <= s.character.wealth && (choice.when?.(s) ?? true));
 }
 
+/** Decisions require independent comprehension, even when their broad stage is childhood. */
+export function ageAppropriate(s: GameState, event: EventDefinition) {
+  const minimum = event.minAge ?? (event.choices ? Math.ceil(6 * lifeScale(s.character)) : 0);
+  return s.character.age >= minimum && event.stages.includes(phase(s.character));
+}
+
 export function eligible(s: GameState, event: EventDefinition) {
   const last = Object.hasOwn(s.seen, event.id) ? s.seen[event.id] : undefined;
-  return event.weight > 0 && (!event.path || event.path === s.path) && event.stages.includes(phase(s.character))
+  return event.weight > 0 && (!event.path || event.path === s.path) && ageAppropriate(s, event)
     && (last === undefined || (event.cooldown !== undefined && s.world.year - last >= Math.ceil(event.cooldown * lifeScale(s.character))))
     && (event.when?.(s) ?? true) && (!event.choices || availableChoices(s, event).length >= 2);
 }
@@ -59,6 +66,10 @@ export function playEvents(s: GameState, rng: RandomSource) {
       continue;
     }
     if (!event) continue;
+    if (!ageAppropriate(s, event) || !(event.when?.(s) ?? true)) {
+      if (phase(s.character) <= Math.max(...event.stages)) future.push({ ...item, year: s.world.year + 1 });
+      continue;
+    }
     if (!event.choices) applyMoment(s, event, rng);
     else if (availableChoices(s, event).length >= 2) openDecision(s, event, rng);
   }
@@ -127,7 +138,16 @@ function resolve(s: GameState, option: Choice, rng: RandomSource) {
   const status = c.status;
   c.wealth -= option.cost ?? 0;
   const success = !option.gamble || rng.next() < clamp(option.gamble.chance(s), .08, .95);
-  if (!success && option.gamble) {
+  if (option.uncertain) {
+    // The encounter's hidden identity is fixed before the choice, independently of UI and reloads.
+    const good = hashSeed(`${s.seed}:${event.id}:${s.seen[event.id]}:identity`) % 2 === 0;
+    const outcome = good ? option.uncertain.good : option.uncertain.bad;
+    effect(s, option.effect);
+    effect(s, outcome.effect);
+    const detail = outcome.apply?.(s, rng);
+    if (outcome.later) s.scheduled.push({ year: s.world.year + outcome.later.years, eventId: outcome.later.eventId });
+    record(s, event.id, event.category, event.title, [option.label + '.', outcome.text, detail].filter(Boolean).join(' '), 'neutral', true);
+  } else if (!success && option.gamble) {
     effect(s, option.gamble.effect);
     record(s, event.id, event.category, event.title, `${option.label}. ${option.gamble.failure}`, 'loss', true);
   } else {
@@ -155,7 +175,7 @@ export function applyChoice(current: GameState, token: string, id: string): Game
   if (current.ended || current.pending?.token !== token || !current.pending.optionIds.includes(id)) return current;
   const event = eventById.get(current.pending.eventId);
   const option = event && availableChoices(current, event).find(choice => choice.id === id);
-  if (!option) return current;
+  if (!option || !ageAppropriate(current, event!)) return current;
   const s = structuredClone(current);
   const rng = randomFrom(s.rngState);
   resolve(s, option, rng);
