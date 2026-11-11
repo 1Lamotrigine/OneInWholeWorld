@@ -1,3 +1,4 @@
+import { fantasyEvents } from '../content/fantasy-events';
 import { dilemmas } from '../content/dilemmas';
 import { pathMissions } from '../content/path-missions';
 import { roleInterval } from './path-development';
@@ -10,10 +11,10 @@ import { traits, type Priority } from '../content/world';
 import type { Choice, Effect, EventDefinition } from '../content/event-types';
 import type { GameState } from '../types';
 import { hashSeed, randomFrom, weighted, type RandomSource } from './random';
-import { changeStats, clamp, lifeScale, phase, record } from './rules';
+import { changeStats, clamp, lifeScale, phase, record, regionState } from './rules';
 import { checkMortality } from './mortality';
 
-export const events: readonly EventDefinition[] = [...decisions, ...moments, ...extendedEvents, ...newEraEvents, ...pathMissions, ...dilemmas];
+export const events: readonly EventDefinition[] = [...decisions, ...moments, ...extendedEvents, ...newEraEvents, ...pathMissions, ...dilemmas, ...fantasyEvents];
 export const eventById = new Map(events.map(event => [event.id, event]));
 
 export function availableChoices(s: GameState, event: EventDefinition) {
@@ -77,12 +78,24 @@ export function playEvents(s: GameState, rng: RandomSource) {
   if (s.pending) return;
 
   const c = s.character;
+  const crisis = regionState(s).crisis;
+  const urgent = events.filter(event => event.worldCrisis && event.worldCrisis === crisis && eligible(s, event));
+  if (urgent.length) { openDecision(s, weighted(urgent, event => event.weight, rng).item, rng); return; }
   const roleEvents = events.filter(event => event.path === s.path && !!s.path && eligible(s, event));
   const lastRoleYear = Math.max(0, ...Object.entries(s.seen).filter(([id]) => eventById.get(id)?.path === s.path && !!s.path).map(([, year]) => year));
   if (roleEvents.length && s.world.year - lastRoleYear >= roleInterval(s)) {
     const mission = roleEvents.find(event => event.id.startsWith('path-'));
     const selected = mission ?? weighted(roleEvents, event => event.weight, rng).item;
     openDecision(s, selected, rng);
+    return;
+  }
+  // Supernatural stories get a regular place in a life, not just a small weight in a mundane catalogue.
+  const recentStories = s.chronicle.filter(row => eventById.has(row.eventId)).slice(-2);
+  const extraordinary = events.filter(event => event.fantasy && eligible(s, event));
+  if (extraordinary.length && (recentStories.length === 0 || recentStories.length === 2 && recentStories.every(row => !eventById.get(row.eventId)?.fantasy))) {
+    const selected = weighted(extraordinary, event => event.weight * (event.choices ? 2 : 1), rng).item;
+    if (selected.choices) openDecision(s, selected, rng);
+    else { s.seen[selected.id] = s.world.year; applyMoment(s, selected, rng); }
     return;
   }
   const relativeAge = c.age / lifeScale(c);
@@ -105,7 +118,7 @@ export function playEvents(s: GameState, rng: RandomSource) {
     const decisionBoost = event.choices ? 1.35 : 1;
     const recentPenalty = recentCategories.at(-1) === event.category ? .2 : recentCategories.includes(event.category) ? .55 : 1;
     const repeats = s.chronicle.filter(row => row.eventId === event.id).length;
-    return event.weight * recentPenalty / (1 + repeats * 2) * stageBoost * focusBoost * pathBoost * decisionBoost * (c.traits.some(trait => traitCategory[trait] === event.category) ? 1.45 : 1);
+    return event.weight * (event.fantasy ? 2.2 : .72) * recentPenalty / (1 + repeats * 2) * stageBoost * focusBoost * pathBoost * decisionBoost * (c.traits.some(trait => traitCategory[trait] === event.category) ? 1.45 : 1);
   }, rng);
   if (event.choices) openDecision(s, event, rng);
   else {

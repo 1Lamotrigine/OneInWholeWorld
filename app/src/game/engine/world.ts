@@ -1,3 +1,4 @@
+import { fantasyCrises, fantasyDispatches } from '../content/fantasy-world';
 import { allied, independentCountry, evolveGeopolitics } from './geopolitics';
 import { countryModifiers } from './world-effects';
 import { atlas, neighbours } from '../content/atlas';
@@ -20,12 +21,14 @@ const crises = {
   invention: { start: 'Распространение новых машин', end: 'Машины стали привычными', text: 'Дешёвые насосы и подъёмники меняют труд на мельницах и в шахтах.', relief: 'Мастерские освоили новые машины и открыли места для учеников.', effects: { education: 14, economy: 19, food: 8 }, duration: [5, 9] },
   eclipse: { start: 'Затмение двух светил', end: 'Светила разошлись', text: 'Редкое затмение меняет работу магических источников. Учёные и хранители спорят о мерах защиты.', relief: 'Магические источники вернулись к обычному ритму.', effects: { magic: 28, safety: -9, education: 7 }, duration: [2, 4] },
   academy: { start: 'Открытие школы', end: 'Первый выпуск школы', text: 'Новая школа открыла занятия. Доступ к наставникам расширился.', relief: 'Первый набор окончил обучение. Школа переходит к обычному расписанию.', effects: { education: 18, economy: 7 }, duration: [5, 10] },
+  ...fantasyCrises,
 } as const;
 type Metric = keyof Omit<RegionState, 'crisis' | 'until'>;
 const metrics: Metric[] = ['economy', 'safety', 'food', 'education', 'magic', 'conflict', 'openness'];
 const crisisIds = Object.keys(crises) as (keyof typeof crises)[];
 
 const dispatches = [
+  ...fantasyDispatches,
   ['Посольства меняются грамотами', 'Делегации соседних стран согласовали безопасный проезд гонцов.', 'openness', 7],
   ['Новая система мер', 'Мастера опубликовали таблицы перевода старых мер в новые.', 'education', 6],
   ['Плохие долговые расписки', 'Несколько торговых домов не выполнили обязательства. Кредиторы ограничили новые займы.', 'economy', -8],
@@ -67,7 +70,7 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
     }
     if (independentCountry(s, id) && !was && rng.next() < (local ? .064 : .037)) {
       const targets = neighbours[id].filter(other => independentCountry(s, other) && !allied(s, id, other) && s.world.regions[other].crisis !== 'war');
-      const weights = { war: targets.length ? 1 + current.conflict / 18 : 0, drought: 1 + (100 - current.food) / 45, plague: 1.4, trade: current.openness / 20, awakening: current.magic / 20, academy: current.education / 21, winter: 1.5, eruption: id === 'emberfall' ? 4 : .2, rebellion: current.conflict / 19, pilgrimage: current.openness / 30, invention: current.education / 28, eclipse: current.magic / 35 };
+      const weights = { war: targets.length ? 1 + current.conflict / 18 : 0, drought: 1 + (100 - current.food) / 45, plague: 1.4, trade: current.openness / 20, awakening: current.magic / 20, academy: current.education / 21, winter: 1.5, eruption: id === 'emberfall' ? 4 : .2, rebellion: current.conflict / 19, pilgrimage: current.openness / 30, invention: current.education / 28, eclipse: current.magic / 35, rift: .8 + current.magic / 30, undead: .8 + current.conflict / 30, wildhunt: .8 + current.magic / 40, dragon: id === 'emberfall' ? 4 : .9 };
       const { item: crisis } = weighted(crisisIds, key => weights[key] * (influence.odds[key] ?? 1), rng);
       current.crisis = crisis;
       const definition = crises[crisis];
@@ -85,7 +88,7 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
         }
       }
       publish(s, id, definition.start, definition.text);
-      if (local) record(s, 'start-' + crisis, 'world', definition.start, definition.text, ['war', 'plague', 'drought'].includes(crisis) ? 'loss' : 'good', true);
+      if (local) record(s, 'start-' + crisis, 'world', definition.start, definition.text, ['war', 'plague', 'drought', 'rift', 'undead', 'wildhunt', 'dragon'].includes(crisis) ? 'loss' : 'good', true);
     }
     const ongoing = s.world.projects.filter(project => project.region === id && (s.world.year - project.started) % 6 === 0 && project.started !== s.world.year);
     for (const project of ongoing) publish(s, id, project.title, `Продолжается дело, начатое ${project.founder}. Его условия меняют положение страны и вероятность новых событий.`);
@@ -93,7 +96,8 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
       s.world.terms[id]++;
       publish(s, id, 'Смена власти', `${atlas[id].title} — ${officeHolder(s, id)}. Новый кабинет принимает первые прошения.`);
     } else if (rng.next() < .11) {
-      const [title, text, metric, delta] = dispatches[integer(0, dispatches.length - 1, rng)];
+      const reports = rng.next() < .68 ? fantasyDispatches : dispatches;
+      const [title, text, metric, delta] = reports[integer(0, reports.length - 1, rng)];
       current[metric] = clamp(current[metric] + delta);
       publish(s, id, title, text);
     }
@@ -104,7 +108,7 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
     }
   }
   if (rng.next() < .014) {
-    const phenomenon = rng.next() < .5 ? 'winter' : 'eclipse';
+    const phenomenon = pick(['winter', 'eclipse', 'rift', 'undead', 'wildhunt'] as const, rng);
     const definition = crises[phenomenon];
     const until = s.world.year + integer(3, 5, rng);
     for (const id of regionIds) {
@@ -120,6 +124,7 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
 }
 
 export const crisisLabels: Record<keyof typeof crises, string> = {
+  rift: fantasyCrises.rift.start, undead: fantasyCrises.undead.start, wildhunt: fantasyCrises.wildhunt.start, dragon: fantasyCrises.dragon.start,
   winter: 'Долгая зима', eruption: 'Вулканический пепел', rebellion: 'Восстание кварталов', pilgrimage: 'Большое паломничество', invention: 'Расцвет изобретений', eclipse: 'Затмение двух светил',
   war: 'Вооружённый конфликт', drought: 'Засуха', plague: 'Мор', trade: 'Торговый подъём', awakening: 'Магическое пробуждение', academy: 'Открыта новая школа',
 };

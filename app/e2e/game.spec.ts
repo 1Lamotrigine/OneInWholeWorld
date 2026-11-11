@@ -245,11 +245,12 @@ test('пол персонажа сохраняется, пять языков п
   const originalAge = await age(page).innerText();
   const buttons = await choice.getByRole('button').count();
   for (const lang of ['en', 'de', 'es', 'it', 'ru']) {
-    await page.locator('.settings summary').click();
-    await page.locator('.language-select select').selectOption(lang);
+    await expect(page.locator('header .language-select')).toBeVisible();
+    await page.locator('header .language-select select').selectOption(lang);
     await expect(page.locator('html')).toHaveAttribute('lang', lang);
-    await expect(page.locator('.settings')).toHaveAttribute('open', '');
-    await page.locator('.settings summary').click();
+    await expect(page.locator('.settings')).not.toHaveAttribute('open');
+    await expect(page.locator('header .language-flag')).toBeVisible();
+    await expect(page.locator('header .language-flag')).toHaveAttribute('data-language', lang);
     if (lang !== 'ru') await expect(choice.getByRole('heading')).not.toContainText(/[А-Яа-яЁё]/);
     await expect(choice.getByRole('button')).toHaveCount(buttons);
     await page.setViewportSize({ width: 320, height: 850 });
@@ -267,11 +268,13 @@ test('пол персонажа сохраняется, пять языков п
   await page.locator('.brand').click();
   await page.setViewportSize({ width: 320, height: 850 });
   for (const lang of ['en', 'de', 'es', 'it', 'ru']) {
-    await page.locator('.settings summary').click();
-    await page.locator('.language-select select').selectOption(lang);
-    await page.locator('.settings summary').click();
+    await expect(page.locator('header .language-select')).toBeVisible();
+    await page.locator('header .language-select select').selectOption(lang);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   }
+  await page.locator('.site-header').screenshot({ path: '/tmp/elarion-language-mobile.png' });
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.locator('.site-header').screenshot({ path: '/tmp/elarion-language-desktop.png' });
   expect(remote).toEqual([]);
 });
 
@@ -358,4 +361,37 @@ test('карта сохраняет завоевания и альянсы, а �
   await page.getByRole('button', { name: 'Карта мира' }).click();
   await page.getByLabel('Поселение').selectOption('frontier:0');
   await expect(page.locator('.atlas-info')).toContainText('Контроль над городом: Валория');
+});
+
+test('разлом вызывает фэнтезийный выбор, оставляет проклятие и сохраняет отложенную цену', async ({ page }) => {
+  const life = takePath(createGame('rift-conduit', 'rift-conduit'), 'mage');
+  life.revealed = true;
+  life.character.race = 'human'; life.character.longevity = 90; life.character.age = 35;
+  life.world.year += 35;
+  life.character.region = 'frontier'; life.character.settlement = 'Край Дорог';
+  life.character.stats.health = 95; life.character.stats.magic = 70; life.character.mastery = 30; life.character.wealth = 80;
+  life.world.regions.frontier.crisis = 'rift'; life.world.regions.frontier.until = life.world.year + 6;
+  const eventId = 'fantasy-rift-last-anchor';
+  life.seen[eventId] = life.world.year;
+  life.pending = { eventId, token: `${life.world.year}-${eventId}`, optionIds: ['venture', 'ward'] };
+  life.rngState = 1;
+  await page.goto('/archive/');
+  await expect(page.getByRole('button', { name: 'Импорт JSON' })).toBeEnabled({ timeout: 15000 });
+  await page.locator('input[type=file]').setInputFiles({ name: 'rift.json', mimeType: 'application/json', buffer: Buffer.from(serializeSave(life)) });
+  await page.getByRole('button', { name: 'Продолжить' }).click(); await settled(page);
+  await expect(page.locator('.arcane-sky')).toBeVisible();
+  await expect(page.locator('.scene-arcane-label')).toHaveText('Разлом над страной');
+  await expect(page.locator('#decision')).toContainText('Якорь падающего неба');
+  await expect(page.locator('.choice-risk')).toContainText('Вероятность успеха');
+  await page.locator('.central-column').screenshot({ path: '/tmp/elarion-fantasy-rift.png' });
+  await page.getByRole('button', { name: /Стать проводником для последнего якоря/ }).click(); await settled(page);
+  await expect(page.locator('.arcane-fate')).toContainText('Проклятие Бездны');
+  await expect(page.locator('.arcane-fate')).toContainText('здоровье −1,8');
+  await expect(page.locator('.scene-arcane-label')).toHaveCount(0);
+  await page.reload(); await settled(page);
+  await expect(page.locator('.arcane-fate')).toContainText('Проклятие Бездны');
+  await page.setViewportSize({ width: 320, height: 850 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.locator('.arcane-fate').screenshot({ path: '/tmp/elarion-fantasy-seal.png' });
 });

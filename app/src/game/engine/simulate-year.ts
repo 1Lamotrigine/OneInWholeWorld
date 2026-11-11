@@ -1,3 +1,4 @@
+import { evolveArcana } from './arcana';
 import { developPath } from './path-development';
 import { backgrounds, races, type StatusId } from '../content/world';
 import { profession, professions } from '../content/professions';
@@ -114,6 +115,7 @@ export function simulateYear(current: GameState): GameState {
     developPath(s, rng);
     familyAndSociety(s, rng);
     evolveWorld(s, rng);
+    evolveArcana(s, rng);
     healthChanges(s, rng);
     // At zero health there is no opportunity to open a new decision.
     if (c.stats.health > 0) playEvents(s, rng);

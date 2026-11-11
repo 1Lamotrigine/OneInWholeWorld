@@ -1,5 +1,7 @@
 'use client';
 
+import { ArcaneFate } from './arcane-fate';
+
 import { Localize } from '../i18n/localize';
 import { ArrowRight, BookOpen, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -43,6 +45,7 @@ export function Game() {
         <div className="central-column column">
           <Scene state={state} />
           <GameAction state={state} />
+          <ArcaneFate state={state} />
           <PathImpact state={state} />
           {!state.path && !state.ended && <div className="panel action-card"><PathPicker state={state} /></div>}
           {state.ended && <DeathSummary state={state} locked={saving || !!error} onNew={newLife} />}

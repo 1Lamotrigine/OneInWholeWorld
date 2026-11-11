@@ -1,3 +1,4 @@
+import { arcaneIds } from '../game/content/arcana';
 import { territoryNames } from '../game/engine/geopolitics';
 import { projectIds } from '../game/content/projects';
 import { z } from 'zod';
@@ -19,7 +20,7 @@ const profession = z.enum(Object.keys(professions) as (keyof typeof professions)
 const stats = z.object(Object.fromEntries(Object.keys(statLabels).map(key => [key, range()])) as Record<keyof typeof statLabels, ReturnType<typeof range>>);
 const regionState = z.object({
   economy: range(), safety: range(), food: range(), education: range(), magic: range(), conflict: range(), openness: range(),
-  crisis: z.enum(['war', 'drought', 'plague', 'trade', 'awakening', 'academy', 'winter', 'eruption', 'rebellion', 'pilgrimage', 'invention', 'eclipse']).nullable(), until: whole(3000),
+  crisis: z.enum(['war', 'drought', 'plague', 'trade', 'awakening', 'academy', 'winter', 'eruption', 'rebellion', 'pilgrimage', 'invention', 'eclipse', 'rift', 'undead', 'wildhunt', 'dragon']).nullable(), until: whole(3000),
 });
 const entry = z.object({
   year: whole(3000, BIRTH_YEAR), age: whole(600), eventId: id,
@@ -32,7 +33,8 @@ function upgradeState(raw: unknown) {
   const versionTwo = raw.schemaVersion === 2 && raw.contentVersion === '2.0.0';
   const versionThree = raw.schemaVersion === 3 && raw.contentVersion === '3.0.0';
   const versionFour = raw.schemaVersion === 4 && raw.contentVersion === '4.0.0';
-  if (!legacy && !versionTwo && !versionThree && !versionFour) return raw;
+  const versionFive = raw.schemaVersion === 5 && raw.contentVersion === '5.0.0';
+  if (!legacy && !versionTwo && !versionThree && !versionFour && !versionFive) return raw;
   if (!('world' in raw) || !raw.world || typeof raw.world !== 'object'
     || !('regions' in raw.world) || !raw.world.regions || typeof raw.world.regions !== 'object'
     || !('character' in raw) || !raw.character || typeof raw.character !== 'object') return raw;
@@ -61,10 +63,11 @@ function upgradeState(raw: unknown) {
   return {
     ...raw, ...(invalidPending ? { pending: null } : {}), schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION,
     ...(legacy ? { path: null, lastMove: 0, lastAct: 0 } : {}),
-    pathExperience: versionFour && 'pathExperience' in raw ? raw.pathExperience : experience,
-    character: { ...character, sex: (versionThree || versionFour) && 'sex' in character ? character.sex : sex },
+    arcana: {},
+    pathExperience: (versionFour || versionFive) && 'pathExperience' in raw ? raw.pathExperience : experience,
+    character: { ...character, sex: (versionThree || versionFour || versionFive) && 'sex' in character ? character.sex : sex },
     world: {
-      ...previous, projects: versionFour && 'projects' in previous ? previous.projects : [], control: Object.fromEntries(regionIds.flatMap(id => regions[id].settlements.map(name => [name, id]))), alliances: [], ...(legacy ? { news: [], fronts: [] } : {}),
+      ...previous, projects: (versionFour || versionFive) && 'projects' in previous ? previous.projects : [], control: versionFive && 'control' in previous ? previous.control : Object.fromEntries(regionIds.flatMap(id => regions[id].settlements.map(name => [name, id]))), alliances: versionFive && 'alliances' in previous ? previous.alliances : [], ...(legacy ? { news: [], fronts: [] } : {}),
       terms: { ...Object.fromEntries(regionIds.map(id => [id, 0])), ...('terms' in previous && typeof previous.terms === 'object' ? previous.terms : {}) },
       regions: { ...initialRegions, ...previousRegions },
     },
@@ -73,6 +76,7 @@ function upgradeState(raw: unknown) {
 
 export const stateSchema: z.ZodType<GameState> = z.preprocess(upgradeState, z.object({
   schemaVersion: z.literal(SCHEMA_VERSION), contentVersion: z.literal(CONTENT_VERSION),
+  arcana: z.partialRecord(z.enum(arcaneIds), whole(3000, BIRTH_YEAR)),
   path: z.enum(pathIds).nullable(), pathExperience: range(1000), lastMove: whole(3000), lastAct: whole(3000),
   saveId: id, seed: line(128), rngState: whole(0xffffffff), revision: whole(100000000),
   character: z.object({
@@ -125,6 +129,7 @@ export const stateSchema: z.ZodType<GameState> = z.preprocess(upgradeState, z.ob
   const pactIds = s.world.alliances.map(pact => [pact.first, pact.second].sort().join('-'));
   if (new Set(pactIds).size !== pactIds.length || s.world.alliances.some(pact => pact.first === pact.second || pact.until <= s.world.year
     || !Object.values(s.world.control).includes(pact.first) || !Object.values(s.world.control).includes(pact.second))) fail('Некорректные союзы.');
+  if (Object.values(s.arcana).some(until => until !== undefined && until <= s.world.year)) fail('Некорректный срок магической печати.');
   const fronts = s.world.fronts.flatMap(front => [front.from, front.to]);
   if (s.lastMove > s.world.year || s.lastAct > s.world.year || s.world.news.some(row => row.year > s.world.year)
     || new Set(fronts).size !== fronts.length || s.world.fronts.some(front =>

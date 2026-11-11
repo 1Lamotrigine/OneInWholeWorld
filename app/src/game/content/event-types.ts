@@ -16,7 +16,7 @@ export type Choice = {
   uncertain?: { good: { text: string; effect: Effect; apply?: Consequence; later?: Choice['later'] }; bad: { text: string; effect: Effect; apply?: Consequence; later?: Choice['later'] } };
 };
 export type EventDefinition = {
-  id: string; minAge?: number; path?: PathId; category: Category; title: string; text: string; weight: number;
+  id: string; fantasy?: boolean; worldCrisis?: GameState['world']['regions'][keyof GameState['world']['regions']]['crisis']; minAge?: number; path?: PathId; category: Category; title: string; text: string; weight: number;
   stages: readonly number[]; when?: (state: GameState) => boolean; cooldown?: number;
   tone?: Tone; milestone?: boolean; effect?: Effect; apply?: Consequence; choices?: Choice[];
 };

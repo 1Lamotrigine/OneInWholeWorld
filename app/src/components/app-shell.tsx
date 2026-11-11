@@ -27,10 +27,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav aria-label="Основная навигация">
           <Link href="/game/" aria-current={game ? 'page' : undefined} aria-label="Жизнь"><BookOpen size={16} /><span>Жизнь</span></Link>
           <Link href="/archive/" aria-current={archive ? 'page' : undefined} aria-label="Сохранения"><Archive size={16} /><span>Сохранения</span></Link>
+          <LanguageSelect />
           <details className="settings">
             <summary className="icon-button" aria-label="Настройки" title="Настройки"><Settings2 size={19} /></summary>
             <div className="settings-menu panel">
-              <strong>Настройки</strong><LanguageSelect />
+              <strong>Настройки</strong>
               <label><input type="checkbox" checked={motion} onChange={toggleMotion} /> Уменьшить анимацию</label>
               <p className="muted">Системная настройка уменьшения движения тоже учитывается.</p>
             </div>
