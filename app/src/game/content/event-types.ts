@@ -1,3 +1,4 @@
+import type { PathId } from './atlas';
 import type { Priority, Stats, StatusId } from './world';
 import type { Category, GameState, Relationship, Tone } from '../types';
 import type { RandomSource } from '../engine/random';
@@ -14,7 +15,7 @@ export type Choice = {
   later?: { eventId: string; years: number };
 };
 export type EventDefinition = {
-  id: string; category: Category; title: string; text: string; weight: number;
+  id: string; path?: PathId; category: Category; title: string; text: string; weight: number;
   stages: readonly number[]; when?: (state: GameState) => boolean; cooldown?: number;
   tone?: Tone; milestone?: boolean; effect?: Effect; apply?: Consequence; choices?: Choice[];
 };
@@ -36,7 +37,7 @@ export function moment(
 
 export function decision(
   id: string, category: Category, stages: readonly number[], title: string, text: string,
-  choices: Choice[], options: Partial<Pick<EventDefinition, 'when' | 'weight' | 'cooldown'>> = {},
+  choices: Choice[], options: Partial<Pick<EventDefinition, 'when' | 'weight' | 'cooldown' | 'path'>> = {},
 ): EventDefinition {
   return { id, category, stages, title, text, choices, weight: 7, milestone: true, ...options };
 }

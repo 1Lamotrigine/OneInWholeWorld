@@ -13,6 +13,9 @@ export const paths = {
   ranger: { name: 'Следопыт', verb: 'Дикие земли и дальние дороги', priority: 'adventure', story: 'Разведка маршрутов, защита лесов и встречи на границах.', categories: ['travel', 'war', 'health'] },
   bard: { name: 'Бард', verb: 'Песни, память и общественный голос', priority: 'wellbeing', story: 'Выступления, споры за авторство и песни, способные примирять города.', categories: ['society', 'relations', 'legacy'] },
   artificer: { name: 'Изобретатель', verb: 'Механизмы и большие стройки', priority: 'knowledge', story: 'Мастерские, водоподъёмные машины и открытия для всей страны.', categories: ['work', 'economy', 'education'] },
+  adventurer: { name: 'Авантюрист', verb: 'Экспедиции, реликвии и рискованные договоры', priority: 'adventure', story: 'От первой экспедиции к открытию путей и решению судьбы опасных находок.', categories: ['travel', 'magic', 'economy'] },
+  diplomat: { name: 'Дипломат', verb: 'Посольства, договоры и примирение стран', priority: 'influence', story: 'Переговоры между государствами, обмен пленными и долгосрочные договоры.', categories: ['politics', 'relations', 'war'] },
+  spy: { name: 'Шпион', verb: 'Разведка, тайные сети и утечки сведений', priority: 'knowledge', story: 'Сведения могут остановить войну или разжечь её. За тайные операции придётся отвечать.', categories: ['politics', 'travel', 'society'] },
 } satisfies Record<string, { name: string; verb: string; priority: Priority; story: string; categories: string[] }>;
 export type PathId = keyof typeof paths;
 export const pathIds = Object.keys(paths) as PathId[];
@@ -161,7 +164,8 @@ export const neighbours: Record<RegionId, readonly RegionId[]> = {
 export function cityNotes(region: RegionId) {
   const related: Partial<Record<PathId, PathId>> = { mage: 'scholar', keeper: 'healer', hero: 'ranger', merchant: 'artificer', politician: 'bard' };
   return atlas[region].cities.map((city, i) => {
-    const roles = [...new Set<PathId>(city.roles.flatMap(role => related[role] ? [role, related[role]!] : [role]))];
+    const specialties: Partial<Record<PathId, PathId>> = { hero: 'adventurer', ranger: 'adventurer', politician: 'diplomat', villain: 'spy' };
+    const roles = [...new Set<PathId>(city.roles.flatMap(role => [role, related[role], specialties[role]].filter((id): id is PathId => !!id)))];
     return { ...city, roles, name: regions[region].settlements[i] };
   });
 }

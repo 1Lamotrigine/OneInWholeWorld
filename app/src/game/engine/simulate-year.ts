@@ -1,3 +1,4 @@
+import { developPath } from './path-development';
 import { backgrounds, races, type StatusId } from '../content/world';
 import { profession, professions } from '../content/professions';
 import type { GameState } from '../types';
@@ -110,6 +111,7 @@ export function simulateYear(current: GameState): GameState {
       record(s, 'stage-' + phase(c), 'stage', lifeStage(c), 'Начинается новый этап жизни.', 'neutral', true);
     }
     needs(s);
+    developPath(s);
     familyAndSociety(s, rng);
     evolveWorld(s, rng);
     healthChanges(s, rng);

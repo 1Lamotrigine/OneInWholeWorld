@@ -48,8 +48,8 @@ export function createGame(seed: string, saveId: string): GameState {
   }
   const state: GameState = {
     schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, saveId, seed, rngState: rng.state, revision: 0, character: c,
-    path: null, lastMove: 0, lastAct: 0,
-    world: { year: BIRTH_YEAR, news: [], fronts: [], terms: Object.fromEntries(regionIds.map(id => [id, 0])) as Record<RegionId, number>, regions: Object.fromEntries(regionIds.map(id => {
+    path: null, pathExperience: 0, lastMove: 0, lastAct: 0,
+    world: { year: BIRTH_YEAR, news: [], fronts: [], projects: [], terms: Object.fromEntries(regionIds.map(id => [id, 0])) as Record<RegionId, number>, regions: Object.fromEntries(regionIds.map(id => {
       const { economy, safety, food, education, magic, conflict, openness } = regions[id];
       return [id, { economy, safety, food, education, magic, conflict, openness, crisis: null, until: 0 }];
     })) as Record<RegionId, RegionState> },

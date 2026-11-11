@@ -446,3 +446,33 @@ small { font-size: .82rem; }
 
 .language-select { display: grid !important; gap: 4px; margin-top: 10px; }
 .language-select select { min-height: 44px; border: 1px solid var(--border); padding: 6px; border-radius: 5px; background: var(--bg); color: var(--text); }
+
+.race-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+.race-card { padding: 15px; display: flex; flex-direction: column; gap: 9px; }
+.race-card-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.race-card-heading h3 { font: 400 1.35rem var(--serif); }
+.race-card-heading span { color: var(--gold); font-size: .75rem; }
+.race-card > p, .race-card details p { color: var(--muted); font-size: .87rem; }
+.race-card dl, .city-opportunity dl { display: grid; gap: 5px; font-size: .82rem; }
+.race-card dl div, .city-opportunity dl div { display: flex; justify-content: space-between; gap: 8px; }
+.race-card dt, .city-opportunity dt { color: var(--muted); }
+.race-card dd, .city-opportunity dd { color: var(--gold); text-align: right; }
+.race-card .race-talent { color: var(--green); }
+.race-card details { margin-top: auto; }
+.race-card summary, .path-impact summary { display: flex; align-items: center; min-height: 44px; color: var(--gold); font-size: .83rem; }
+.race-card details ul { color: var(--text); font-size: .84rem; margin-block: 7px; }
+.race-card small, .city-opportunity small { color: var(--muted); font-size: .77rem; }
+.path-impact { padding: 12px 15px; }
+.path-impact-heading { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: space-between; }
+.path-impact-heading > strong { font-size: .82rem; font-weight: 550; color: var(--gold); }
+.path-impact > p, .path-impact details > p { color: var(--muted); font-size: .86rem; margin-top: 7px; }
+.city-opportunity { border: 1px solid var(--border); border-radius: 6px; padding: 9px; margin-top: 8px; background: #101821; }
+.city-opportunity strong { color: var(--green); font-size: .85rem; }
+.city-opportunity > p, .city-mismatch { color: var(--muted); font-size: .8rem; margin-block: 5px; }
+.city-role-select { margin-top: 9px; }
+.world-legacy article + article { border-top: 1px solid var(--border); margin-top: 11px; padding-top: 11px; }
+.world-legacy h3 { font-size: .91rem; color: var(--gold); }
+.world-legacy article p, .world-legacy article small { color: var(--muted); font-size: .78rem; margin-block: 3px; }
+.world-legacy ul { display: flex; flex-wrap: wrap; gap: 3px 9px; font-size: .78rem; color: var(--green); }
+@media (max-width: 1199px) { .race-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 550px) { .race-grid { grid-template-columns: minmax(0,1fr); } }

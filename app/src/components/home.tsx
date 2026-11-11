@@ -7,7 +7,9 @@ import { useRouter } from 'next/navigation';
 import { useGame } from '../stores/game-store';
 import { Loading, StorageStatus } from './app-shell';
 import { atlas, pathIds, paths } from '../game/content/atlas';
-import { raceIds, regionIds, regions, regionScene } from '../game/content/world';
+import { races, statLabels, raceIds, regionIds, regions, regionScene } from '../game/content/world';
+import { raceLore } from '../game/content/race-lore';
+import type { Stats } from '../game/content/world';
 import { PathIcon } from './life-path';
 import { WorldMap } from './world-map';
 
@@ -44,6 +46,30 @@ export function Home() {
     <div className="home-principles">
       {principles.map(([Icon, title, text]) => <article className="panel principle" key={title}><Icon size={19} /><h2>{title}</h2><p>{text}</p></article>)}
     </div>
+    <section className="home-section" id="peoples" aria-labelledby="peoples-heading">
+      <div className="home-section-heading"><div><p className="eyebrow"><BookOpen size={16} /> Народы Элариона</p>
+        <h2 id="peoples-heading">Восемь разных начал жизни</h2>
+        <p>Раса задаёт склонности и темп взросления. Судьба складывается из условий жизни и решений.</p></div></div>
+      <div className="race-grid">{raceIds.map(id => {
+        const race = races[id];
+        const lore = raceLore[id];
+        return <article className="panel race-card" key={id}>
+          <div className="race-card-heading"><h3>{race.name}</h3><span>{race.weight}% рождений</span></div>
+          <p>{lore.description}</p>
+          <dl>
+            <div><dt>Обычный диапазон жизни</dt><dd>{race.lifespan[0]}–{race.lifespan[1]} лет</dd></div>
+            <div><dt>Юность начинается</dt><dd>{race.stages[1]} лет</dd></div>
+            <div><dt>Зрелость начинается</dt><dd>{race.stages[2]} лет</dd></div>
+          </dl>
+          <p className="race-talent">{lore.talent}</p>
+          <details><summary>Особенности и ограничения</summary>
+            <p>{lore.limitation}</p>
+            <ul>{Object.entries(race.stats).map(([stat, value]) => <li key={stat}>{statLabels[stat as keyof Stats]} {value > 0 ? '+' : ''}{value}</li>)}</ul>
+            <small>Это начальные склонности. Возраст смерти не предопределён.</small>
+          </details>
+        </article>;
+      })}</div>
+    </section>
     <section className="home-section" id="continent">
       <div className="home-section-heading"><div><p className="eyebrow"><Globe2 size={16} /> Атлас материка</p><h2>Материк многих королевств.</h2><p>У каждой земли свои законы, люди и места, куда ведут дороги.</p></div><WorldMap /></div>
       <div className="country-grid">{regionIds.map(id => <article key={id} className="panel country-preview">

@@ -1,3 +1,4 @@
+import { projectIds } from '../game/content/projects';
 import { z } from 'zod';
 import { neighbours, pathIds } from '../game/content/atlas';
 import { professions } from '../game/content/professions';
@@ -27,7 +28,9 @@ const entry = z.object({
 function upgradeState(raw: unknown) {
   if (!raw || typeof raw !== 'object' || !('schemaVersion' in raw) || !('contentVersion' in raw)) return raw;
   const legacy = raw.schemaVersion === 1 && raw.contentVersion === '1.0.0';
-  if (!legacy && !(raw.schemaVersion === 2 && raw.contentVersion === '2.0.0')) return raw;
+  const versionTwo = raw.schemaVersion === 2 && raw.contentVersion === '2.0.0';
+  const versionThree = raw.schemaVersion === 3 && raw.contentVersion === '3.0.0';
+  if (!legacy && !versionTwo && !versionThree) return raw;
   if (!('world' in raw) || !raw.world || typeof raw.world !== 'object'
     || !('regions' in raw.world) || !raw.world.regions || typeof raw.world.regions !== 'object'
     || !('character' in raw) || !raw.character || typeof raw.character !== 'object') return raw;
@@ -39,18 +42,23 @@ function upgradeState(raw: unknown) {
     return [id, { economy, safety, food, education, magic, conflict, openness, crisis: null, until: 0 }];
   }));
   let sex: 'male' | 'female' | 'unknown' = 'unknown';
+  let experience = 0;
   if ('race' in character && typeof character.race === 'string' && Object.hasOwn(races, character.race)
     && 'name' in character && typeof character.name === 'string') {
     const raceId = character.race as keyof typeof races;
     const name = character.name.split(' ')[0];
     if ((races[raceId].names as readonly string[]).includes(name)) sex = femaleNames[raceId].includes(name) ? 'female' : 'male';
+    if ('path' in raw && raw.path && 'age' in character && typeof character.age === 'number') {
+      experience = Math.max(0, character.age - races[raceId].stages[1]) / Math.sqrt(races[raceId].lifespan[1] / 95) * .9;
+    }
   }
   return {
     ...raw, schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION,
     ...(legacy ? { path: null, lastMove: 0, lastAct: 0 } : {}),
-    character: { ...character, sex },
+    pathExperience: experience,
+    character: { ...character, sex: versionThree && 'sex' in character ? character.sex : sex },
     world: {
-      ...previous, ...(legacy ? { news: [], fronts: [] } : {}),
+      ...previous, projects: [], ...(legacy ? { news: [], fronts: [] } : {}),
       terms: { ...Object.fromEntries(regionIds.map(id => [id, 0])), ...('terms' in previous && typeof previous.terms === 'object' ? previous.terms : {}) },
       regions: { ...initialRegions, ...previousRegions },
     },
@@ -59,7 +67,7 @@ function upgradeState(raw: unknown) {
 
 export const stateSchema: z.ZodType<GameState> = z.preprocess(upgradeState, z.object({
   schemaVersion: z.literal(SCHEMA_VERSION), contentVersion: z.literal(CONTENT_VERSION),
-  path: z.enum(pathIds).nullable(), lastMove: whole(3000), lastAct: whole(3000),
+  path: z.enum(pathIds).nullable(), pathExperience: range(1000), lastMove: whole(3000), lastAct: whole(3000),
   saveId: id, seed: line(128), rngState: whole(0xffffffff), revision: whole(100000000),
   character: z.object({
     name: line(), sex: z.enum(Object.keys(sexes) as (keyof typeof sexes)[]), race, origin: region, region, birthplace: line(), settlement: line(), background: status, status,
@@ -77,6 +85,10 @@ export const stateSchema: z.ZodType<GameState> = z.preprocess(upgradeState, z.ob
   world: z.object({
     year: whole(3000, BIRTH_YEAR), regions: z.record(region, regionState), terms: z.record(region, whole(600)),
     news: z.array(z.object({ year: whole(3000, BIRTH_YEAR), region, title: line(), text: line(2000) })).max(36),
+    projects: z.array(z.object({
+      id, region, kind: z.enum(projectIds), founder: line(), title: line(),
+      started: whole(3000, BIRTH_YEAR), until: whole(3000, BIRTH_YEAR),
+    })).max(48),
     fronts: z.array(z.object({ from: region, to: region, until: whole(3000, BIRTH_YEAR) })).max(6),
   }),
   birthOdds: z.object({ race: range(1, Number.MIN_VALUE), region: range(1, Number.MIN_VALUE), background: range(1, Number.MIN_VALUE) }),
@@ -99,6 +111,8 @@ export const stateSchema: z.ZodType<GameState> = z.preprocess(upgradeState, z.ob
   if (c.relationships.some(p => p.born > s.world.year || p.died !== null && (p.died < p.born || p.died > s.world.year))
     || c.relationships.some((p, index) => p.id !== 'person-' + index)) fail('Некорректные семейные записи.');
   if (regionIds.some(id => { const r = s.world.regions[id]; return r.crisis ? r.until <= s.world.year : r.until !== 0; })) fail('Некорректный срок кризиса.');
+  if (s.world.projects.some(project => project.id !== project.region + '-' + project.kind || project.started > s.world.year || project.until <= s.world.year || project.until <= project.started)
+    || new Set(s.world.projects.map(project => project.id)).size !== s.world.projects.length) fail('Некорректные долгосрочные последствия.');
   const fronts = s.world.fronts.flatMap(front => [front.from, front.to]);
   if (s.lastMove > s.world.year || s.lastAct > s.world.year || s.world.news.some(row => row.year > s.world.year)
     || new Set(fronts).size !== fronts.length || s.world.fronts.some(front =>

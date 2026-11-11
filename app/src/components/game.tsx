@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { regions } from '../game/content/world';
 import { useGame } from '../stores/game-store';
 import { Loading, StorageStatus } from './app-shell';
+import { PathImpact, WorldLegacy } from './path-impact';
 import { Scene } from './art';
 import { GameAction } from './game-action';
 import { CharacterPanel, Chronicle, ContextPanels, FamilyPanel, LifeProgress } from './game-panels';
@@ -42,12 +43,13 @@ export function Game() {
         <div className="central-column column">
           <Scene state={state} />
           <GameAction state={state} />
+          <PathImpact state={state} />
           {!state.path && !state.ended && <div className="panel action-card"><PathPicker state={state} /></div>}
           {state.ended && <DeathSummary state={state} locked={saving || !!error} onNew={newLife} />}
           <Chronicle state={state} />
         </div>
         <aside className="character-column column" aria-label="О персонаже"><CharacterPanel state={state} /></aside>
-        <aside className="world-column column" aria-label="Семья и мир"><FamilyPanel state={state} /><LifeProgress state={state} /><WorldActions state={state} /><WorldGazette state={state} /><ContextPanels state={state} /></aside>
+        <aside className="world-column column" aria-label="Семья и мир"><FamilyPanel state={state} /><LifeProgress state={state} /><WorldActions state={state} /><WorldLegacy state={state} /><WorldGazette state={state} /><ContextPanels state={state} /></aside>
       </div>
     </div>
   </main></Localize>;

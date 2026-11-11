@@ -274,3 +274,55 @@ test('пол персонажа сохраняется, пять языков п
   }
   expect(remote).toEqual([]);
 });
+
+test('главная объясняет восемь рас, а рождение предлагает 15 жизненных путей', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await expect(page.locator('.race-card')).toHaveCount(8);
+  for (const race of Object.values(races)) {
+    const card = page.locator('.race-card').filter({ has: page.getByRole('heading', { name: race.name, exact: true }) });
+    await expect(card).toContainText(`${race.lifespan[0]}–${race.lifespan[1]}`);
+    await expect(card).toContainText('Зрелость начинается');
+  }
+  await page.getByRole('button', { name: 'Начать жизнь' }).click();
+  await expect(page.locator('.path-choice')).toHaveCount(15);
+  for (const name of ['Авантюрист', 'Дипломат', 'Шпион']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
+});
+
+test('авантюрист принимает мировое решение, город даёт поддержку, последствия переживают перезагрузку', async ({ page }) => {
+  const life = takePath(createGame('adventurer-story', 'adventurer-story'), 'adventurer');
+  life.revealed = true;
+  life.character.age = races[life.character.race].stages[2] + 20;
+  life.world.year += life.character.age;
+  life.character.region = 'frontier';
+  life.character.settlement = 'Край Дорог';
+  life.character.stats.health = 95;
+  life.character.wealth = 90;
+  life.pathExperience = 20;
+  life.seen['path-adventurer-1'] = life.world.year - 20;
+  await page.goto('/archive/');
+  await expect(page.getByRole('button', { name: 'Импорт JSON' })).toBeEnabled({ timeout: 15000 });
+  await page.locator('input[type=file]').setInputFiles({ name: 'adventurer.json', mimeType: 'application/json', buffer: Buffer.from(serializeSave(life)) });
+  await page.getByRole('button', { name: 'Продолжить' }).click();
+  await settled(page);
+  await page.getByRole('button', { name: 'До решения' }).click();
+  await expect(page.locator('#decision')).toContainText('Право на древние руины');
+  await page.getByRole('button', { name: /Разрешить испытания реликвий/ }).click();
+  await settled(page);
+  await expect(page.locator('.world-legacy')).toContainText('Опасные магические исследования');
+  await expect(page.locator('.world-legacy')).toContainText('Безопасность -10');
+  await page.locator('.path-impact summary').click();
+  await expect(page.locator('.path-impact')).toContainText('Экспедиционная контора');
+  await expect(page.locator('.path-impact .city-opportunity')).toContainText('Опыт пути');
+  await page.getByRole('button', { name: 'Карта мира' }).click();
+  const modal = page.getByRole('dialog');
+  await expect(modal.locator('.city-opportunity')).toContainText('Экспедиционная контора');
+  await modal.getByLabel('Преимущества для роли').selectOption('mage');
+  await expect(modal.locator('.city-opportunity')).toContainText('Магический круг');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.path-impact')).toContainText('Авантюрист');
+  await page.reload();
+  await settled(page);
+  await expect(page.locator('.world-legacy')).toContainText('Опасные магические исследования');
+  await expect(page.locator('.world-legacy')).toContainText(life.character.name);
+});

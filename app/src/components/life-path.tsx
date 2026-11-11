@@ -9,7 +9,7 @@ import { actionReason, actions, warTargets, type ActionId } from '../game/engine
 import type { GameState } from '../game/types';
 import { useGame } from '../stores/game-store';
 
-const icons = { healer: HeartHandshake, scholar: BookOpen, ranger: Compass, bard: Sparkles, artificer: Landmark, warrior: Sword, mage: Sparkles, hero: Shield, politician: Crown, merchant: Wallet, villain: Flame, keeper: HeartHandshake };
+const icons = { adventurer: Compass, diplomat: Landmark, spy: Shield, healer: HeartHandshake, scholar: BookOpen, ranger: Compass, bard: Sparkles, artificer: Landmark, warrior: Sword, mage: Sparkles, hero: Shield, politician: Crown, merchant: Wallet, villain: Flame, keeper: HeartHandshake };
 export const PathIcon = ({ path }: { path: PathId }) => { const Icon = icons[path]; return <Localize><Icon size={18} /></Localize>; };
 
 export function PathPicker({ state, showPicked = true }: { state: GameState; showPicked?: boolean }) {

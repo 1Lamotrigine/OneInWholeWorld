@@ -67,7 +67,7 @@ const contribute = (scene: Scene, s: GameState) => {
 export const newEraEvents: EventDefinition[] = scenes.map(scene => decision(scene.id, scene.category, scene.stages, scene.title, scene.text, [
   option('engage', scene.act, 'Новый опыт и возможное влияние на общину', scene.result, ['knowledge', 'influence', 'wellbeing'], scene.effect, { apply: s => contribute(scene, s) }),
   option('alternative', scene.alternative, 'Другой способ разрешить ситуацию', scene.other, ['survival', 'wealth', 'adventure'], scene.otherEffect),
-], { weight: 8, when: s => (!scene.path || s.path === scene.path) && (!scene.race || s.character.race === scene.race) && (!scene.region || s.character.region === scene.region) && (scene.when?.(s) ?? true) }));
+], { weight: 8, path: scene.path, when: s => (!scene.path || s.path === scene.path) && (!scene.race || s.character.race === scene.race) && (!scene.region || s.character.region === scene.region) && (scene.when?.(s) ?? true) }));
 
 const quietYears: [string, Category, string, string, Effect][] = [
   ['bright-mushrooms', 'magic', 'Светящиеся грибы', 'На старом пне появились грибы, светящиеся только после дождя. Их зарисовали для местного архива.', { education: 2, stats: { happiness: 3 } }],

@@ -1,3 +1,4 @@
+import { countryModifiers } from './world-effects';
 import { atlas, neighbours } from '../content/atlas';
 import { officeHolder, publish } from './influence';
 import { regionIds, regions } from '../content/world';
@@ -47,10 +48,14 @@ const dispatches = [
 ] as const;
 
 export function evolveWorld(s: GameState, rng: RandomSource) {
+  const expired = s.world.projects.filter(project => project.until <= s.world.year);
+  s.world.projects = s.world.projects.filter(project => project.until > s.world.year);
+  for (const project of expired) publish(s, project.region, 'Завершение общего дела', project.title + '. Наступил срок пересмотра договорённостей.');
   s.world.fronts = s.world.fronts.filter(front => front.until > s.world.year);
   for (const id of regionIds) {
     const current = s.world.regions[id];
     const base = regions[id];
+    const influence = countryModifiers(s, id);
     const local = id === s.character.region;
     const was = current.crisis;
     if (was && s.world.year >= current.until) {
@@ -61,7 +66,7 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
     }
     if (!was && rng.next() < (local ? .064 : .037)) {
       const weights = { war: 1 + current.conflict / 18, drought: 1 + (100 - current.food) / 45, plague: 1.4, trade: current.openness / 20, awakening: current.magic / 20, academy: current.education / 21, winter: 1.5, eruption: id === 'emberfall' ? 4 : .2, rebellion: current.conflict / 19, pilgrimage: current.openness / 30, invention: current.education / 28, eclipse: current.magic / 35 };
-      const { item: crisis } = weighted(crisisIds, key => weights[key], rng);
+      const { item: crisis } = weighted(crisisIds, key => weights[key] * (influence.odds[key] ?? 1), rng);
       current.crisis = crisis;
       const definition = crises[crisis];
       current.until = s.world.year + integer(definition.duration[0], definition.duration[1], rng);
@@ -81,6 +86,8 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
       publish(s, id, definition.start, definition.text);
       if (local) record(s, 'start-' + crisis, 'world', definition.start, definition.text, ['war', 'plague', 'drought'].includes(crisis) ? 'loss' : 'good', true);
     }
+    const ongoing = s.world.projects.filter(project => project.region === id && (s.world.year - project.started) % 6 === 0 && project.started !== s.world.year);
+    for (const project of ongoing) publish(s, id, project.title, `Продолжается дело, начатое ${project.founder}. Его условия меняют положение страны и вероятность новых событий.`);
     if (rng.next() < .014) {
       s.world.terms[id]++;
       publish(s, id, 'Смена власти', `${atlas[id].title} — ${officeHolder(s, id)}. Новый кабинет принимает первые прошения.`);
@@ -91,7 +98,7 @@ export function evolveWorld(s: GameState, rng: RandomSource) {
     }
     const effects: Partial<Record<Metric, number>> = current.crisis ? crises[current.crisis].effects : {};
     for (const key of metrics) {
-      const target = base[key] + (effects[key] ?? 0);
+      const target = base[key] + (effects[key] ?? 0) + (influence.metrics[key] ?? 0);
       current[key] = clamp(current[key] + (target - current[key]) * .34 + integer(-2, 2, rng));
     }
   }

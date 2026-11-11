@@ -3,6 +3,7 @@
 import { Localize, useLanguage } from '../i18n/localize';
 import { ArrowRight, Download, Feather, Share2 } from 'lucide-react';
 import { useState } from 'react';
+import { paths } from '../game/content/atlas';
 import { backgrounds, races, regions, sexes } from '../game/content/world';
 import { professions } from '../game/content/professions';
 import type { GameState } from '../game/types';
@@ -80,6 +81,7 @@ export function DeathSummary({ state, onNew, locked }: { state: GameState; onNew
     <p className="summary-identity">{c.name} · {races[c.race].name} · {sexes[c.sex]} · {ageText(c.age)}</p>
     <p><strong>{end.cause}.</strong> {end.epitaph}</p>
     <dl className="summary-facts">
+      {state.path && <div><dt>Жизненный путь</dt><dd>{paths[state.path].name}</dd></div>}
       <div><dt>Откуда</dt><dd>{c.birthplace}, {regions[c.origin].name}</dd></div>
       <div><dt>Последний дом</dt><dd>{c.settlement}, {regions[c.region].name}</dd></div>
       <div><dt>Положение</dt><dd>{backgrounds[c.background].status} → {backgrounds[c.status].status}</dd></div>

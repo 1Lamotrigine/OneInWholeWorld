@@ -2,8 +2,9 @@
 
 import { Localize } from '../i18n/localize';
 import { Check, Compass, GitFork, Sparkles } from 'lucide-react';
+import { paths } from '../game/content/atlas';
 import { eventById } from '../game/engine/events';
-import { priorities, type Priority } from '../game/content/world';
+import { regions, priorities, type Priority } from '../game/content/world';
 import { categories, type GameState } from '../game/types';
 import { useGame } from '../stores/game-store';
 
@@ -11,10 +12,13 @@ export function GameAction({ state }: { state: GameState }) {
   const { choose, setPriority, saving } = useGame();
   const pending = state.pending;
   const event = pending && eventById.get(pending.eventId);
+  const project = event?.id === 'path-project-reckoning'
+    ? state.world.projects.findLast(project => project.founder === state.character.name) : undefined;
   if (state.ended) return null;
   if (pending && event) return <Localize><section className="panel action-card decision" aria-labelledby="decision-heading" id="decision">
-    <p className="eyebrow"><GitFork size={16} /> Важное решение <span>{categories[event.category]}</span></p>
+    <p className="eyebrow"><GitFork size={16} /> Важное решение <span>{event.path ? paths[event.path].name : categories[event.category]}</span></p>
     <h2 id="decision-heading">{event.title}</h2><p>{event.text}</p>
+    {project && <p className="project-under-review">{project.title} · {regions[project.region].name} · {project.until}</p>}
     <div className="decision-options">{pending.optionIds.map(id => {
       const option = event.choices?.find(choice => choice.id === id);
       return option && <button key={id} className="choice-button" disabled={saving} onClick={() => choose(pending.token, id)}>

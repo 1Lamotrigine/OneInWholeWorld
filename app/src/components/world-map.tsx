@@ -3,7 +3,8 @@
 import { Localize } from '../i18n/localize';
 import { Compass, Map, MapPin, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { atlas, cityNotes, paths } from '../game/content/atlas';
+import { CityOpportunity } from './path-impact';
+import { atlas, cityNotes, paths, type PathId } from '../game/content/atlas';
 import { regionIds, regions, type RegionId } from '../game/content/world';
 import { moveOffer, officeHolder } from '../game/engine/influence';
 import { crisisLabels } from '../game/engine/world';
@@ -31,12 +32,15 @@ export function WorldMap({ state, compact = false }: { state?: GameState; compac
   const drag = useRef<{ pointer: number; x: number; y: number; view: View; moved: boolean } | null>(null);
   const [view, setView] = useState(initialView);
   const [selected, select] = useState<Cursor>({ region: state?.character.region ?? 'valoria', city: 0 });
+  const [inspection, setInspection] = useState<PathId | null>(null);
   const [hover, setHover] = useState<Cursor | null>(null);
   const [open, setOpen] = useState(false);
   const [arrival, setArrival] = useState('');
   const { saving, moveTo } = useGame();
   const country = atlas[selected.region];
   const city = cities[selected.region][selected.city];
+  const inspectedPath = inspection && city.roles.includes(inspection) ? inspection
+    : state?.path && city.roles.includes(state.path) ? state.path : city.roles[0];
   const tooltip = hover && cities[hover.region][hover.city];
   const local = state?.world.regions[selected.region];
   const front = state?.world.fronts.find(front => front.from === selected.region || front.to === selected.region);
@@ -168,6 +172,13 @@ export function WorldMap({ state, compact = false }: { state?: GameState; compac
             </label>
             <h4>{city.name}</h4><p>{city.text}</p>
             <div className="atlas-tags">{city.roles.map(role => <span key={role}>{paths[role].name}</span>)}</div>
+            <label className="city-select city-role-select">Преимущества для роли
+              <select value={inspectedPath} onChange={event => setInspection(event.target.value as PathId)}>
+                {city.roles.map(role => <option key={role} value={role}>{paths[role].name}</option>)}
+              </select>
+            </label>
+            <CityOpportunity path={inspectedPath} state={state} region={selected.region} settlement={city.name} />
+            {state?.path && !city.roles.includes(state.path) && <p className="city-mismatch">Ваш путь здесь не получает профильной поддержки.</p>}
             {offer && <div className="map-move">
               <button className="button primary" disabled={!!offer.reason || saving} onClick={() => {
                 moveTo(selected.region, city.name);

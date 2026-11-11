@@ -1,3 +1,5 @@
+import { pathMissions } from '../content/path-missions';
+import { roleInterval } from './path-development';
 import { newEraEvents } from '../content/new-era-events';
 import { extendedEvents } from '../content/turning-points';
 import { paths } from '../content/atlas';
@@ -10,7 +12,7 @@ import { randomFrom, weighted, type RandomSource } from './random';
 import { changeStats, clamp, lifeScale, phase, record } from './rules';
 import { checkMortality } from './mortality';
 
-export const events: readonly EventDefinition[] = [...decisions, ...moments, ...extendedEvents, ...newEraEvents];
+export const events: readonly EventDefinition[] = [...decisions, ...moments, ...extendedEvents, ...newEraEvents, ...pathMissions];
 export const eventById = new Map(events.map(event => [event.id, event]));
 
 export function availableChoices(s: GameState, event: EventDefinition) {
@@ -19,7 +21,7 @@ export function availableChoices(s: GameState, event: EventDefinition) {
 
 export function eligible(s: GameState, event: EventDefinition) {
   const last = Object.hasOwn(s.seen, event.id) ? s.seen[event.id] : undefined;
-  return event.weight > 0 && event.stages.includes(phase(s.character))
+  return event.weight > 0 && (!event.path || event.path === s.path) && event.stages.includes(phase(s.character))
     && (last === undefined || (event.cooldown !== undefined && s.world.year - last >= Math.ceil(event.cooldown * lifeScale(s.character))))
     && (event.when?.(s) ?? true) && (!event.choices || availableChoices(s, event).length >= 2);
 }
@@ -64,6 +66,14 @@ export function playEvents(s: GameState, rng: RandomSource) {
   if (s.pending) return;
 
   const c = s.character;
+  const roleEvents = events.filter(event => event.path === s.path && !!s.path && eligible(s, event));
+  const lastRoleYear = Math.max(0, ...Object.entries(s.seen).filter(([id]) => eventById.get(id)?.path === s.path && !!s.path).map(([, year]) => year));
+  if (roleEvents.length && s.world.year - lastRoleYear >= roleInterval(s)) {
+    const mission = roleEvents.find(event => event.id.startsWith('path-'));
+    const selected = mission ?? weighted(roleEvents, event => event.weight, rng).item;
+    openDecision(s, selected, rng);
+    return;
+  }
   const relativeAge = c.age / lifeScale(c);
   const opening = c.age <= 2;
   if (!opening && rng.next() >= (phase(c) === 1 ? .89 : .78) / lifeScale(c)) return;
@@ -80,7 +90,7 @@ export function playEvents(s: GameState, rng: RandomSource) {
   const { item: event } = weighted(options, event => {
     const stageBoost = event.id === 'first-work' ? 2.4 : event.id === 'school' && relativeAge < 10 ? .7 : 1;
     const focusBoost = focusCategories[s.priority].includes(event.category) ? 1.22 : 1;
-    const pathBoost = s.path && paths[s.path].categories.includes(event.category) ? 1.38 : 1;
+    const pathBoost = event.path === s.path && s.path ? 4 : s.path && paths[s.path].categories.includes(event.category) ? 1.65 : 1;
     const decisionBoost = event.choices ? 1.35 : 1;
     const recentPenalty = recentCategories.at(-1) === event.category ? .2 : recentCategories.includes(event.category) ? .55 : 1;
     const repeats = s.chronicle.filter(row => row.eventId === event.id).length;
