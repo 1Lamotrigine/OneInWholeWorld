@@ -4,10 +4,10 @@ import { Children, cloneElement, createContext, isValidElement, useContext, useE
 import { ChevronDown } from 'lucide-react';
 import { languages, translateText, type Language } from './translate';
 
-const LanguageContext = createContext<{ language: Language; setLanguage(value: Language): void }>({ language: 'ru', setLanguage: () => {} });
+const LanguageContext = createContext<{ language: Language; setLanguage(value: Language): void }>({ language: 'en', setLanguage: () => {} });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('ru');
+  const [language, setLanguage] = useState<Language>('en');
   useEffect(() => {
     let saved: string | null = null;
     try { saved = localStorage.getItem('elarion-language'); } catch { /* Optional preference. */ }

@@ -7,6 +7,16 @@ import { races, regionIds, regions } from '../src/game/content/world';
 const settled = (page: Page) => expect(page.getByText('Сохранено на устройстве')).toBeVisible({ timeout: 15000 });
 const age = (page: Page) => page.getByTestId('age');
 
+// The app is English by default; these scenarios assert the Russian interface.
+// Keep a saved preference intact so language-persistence checks still work.
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => {
+    try {
+      if (!localStorage.getItem('elarion-language')) localStorage.setItem('elarion-language', 'ru');
+    } catch { /* Storage can be unavailable before the first navigation. */ }
+  });
+});
+
 async function pickPath(page: Page) {
   await page.getByRole('button', { name: 'Воин', exact: true }).click();
   await page.getByRole('button', { name: 'Подтвердить путь · Воин' }).click();
